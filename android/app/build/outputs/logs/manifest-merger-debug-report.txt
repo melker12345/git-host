@@ -1,0 +1,368 @@
+-- Merging decision tree log ---
+manifest
+ADDED from /home/melker/Desktop/code/plans/local_github/android/app/src/main/AndroidManifest.xml:2:1-44:12
+INJECTED from /home/melker/Desktop/code/plans/local_github/android/app/src/main/AndroidManifest.xml:2:1-44:12
+INJECTED from /home/melker/Desktop/code/plans/local_github/android/app/src/main/AndroidManifest.xml:2:1-44:12
+INJECTED from /home/melker/Desktop/code/plans/local_github/android/app/src/main/AndroidManifest.xml:2:1-44:12
+MERGED from [androidx.navigation:navigation-common:2.7.7] /home/melker/.gradle/caches/transforms-4/da4fe9f2c312b38b4d3fab9d81287b94/transformed/navigation-common-2.7.7/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.navigation:navigation-runtime:2.7.7] /home/melker/.gradle/caches/transforms-4/9b6e2a4d968b6cca917fed3c593cef22/transformed/navigation-runtime-2.7.7/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.navigation:navigation-common-ktx:2.7.7] /home/melker/.gradle/caches/transforms-4/3121a955623eb80e8892c697a8497564/transformed/navigation-common-ktx-2.7.7/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.navigation:navigation-runtime-ktx:2.7.7] /home/melker/.gradle/caches/transforms-4/f3f04bc4e3479a959609997cc9662063/transformed/navigation-runtime-ktx-2.7.7/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.navigation:navigation-compose:2.7.7] /home/melker/.gradle/caches/transforms-4/213b1d65b91b47a51925cbbaef2492d7/transformed/navigation-compose-2.7.7/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.activity:activity:1.8.2] /home/melker/.gradle/caches/transforms-4/ab6dea4869acb16c1a4b4f9f291169c4/transformed/activity-1.8.2/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.activity:activity-ktx:1.8.2] /home/melker/.gradle/caches/transforms-4/9be0447809eb54cbe80c03a81076a74d/transformed/activity-ktx-1.8.2/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.material3:material3-android:1.2.0] /home/melker/.gradle/caches/transforms-4/769734522087fdcbf47af4397c854b04/transformed/material3-release/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.compose.material:material-android:1.6.1] /home/melker/.gradle/caches/transforms-4/d210ecbdaef71c112bf6d7e77a33ac6f/transformed/material-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.material:material-icons-core-android:1.6.1] /home/melker/.gradle/caches/transforms-4/51e22fadd54df6195a26087693803002/transformed/material-icons-core-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.material:material-icons-extended-android:1.6.1] /home/melker/.gradle/caches/transforms-4/ee236d7d9667600ede643661d0d19a58/transformed/material-icons-extended-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.material:material-ripple-android:1.6.1] /home/melker/.gradle/caches/transforms-4/54b1f9fe54ee32783b940aac41db3b57/transformed/material-ripple-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.animation:animation-core-android:1.6.1] /home/melker/.gradle/caches/transforms-4/2597dc909e749dd86c55958e2b9ddb88/transformed/animation-core-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.animation:animation-android:1.6.1] /home/melker/.gradle/caches/transforms-4/9dac12f6fd3d2bdd4fded6efd39557e0/transformed/animation-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.foundation:foundation-layout-android:1.6.1] /home/melker/.gradle/caches/transforms-4/9f6f3cdbc3b55e37df2b153f441689f1/transformed/foundation-layout-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.foundation:foundation-android:1.6.1] /home/melker/.gradle/caches/transforms-4/3e943e31d8d4c1be37c7929fbca94bbd/transformed/foundation-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.ui:ui-tooling-data-android:1.6.1] /home/melker/.gradle/caches/transforms-4/2658512c31d1fe6780709c77d192bd8c/transformed/ui-tooling-data-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.ui:ui-unit-android:1.6.1] /home/melker/.gradle/caches/transforms-4/b762174b487358f28815c6f47b21af5c/transformed/ui-unit-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.ui:ui-geometry-android:1.6.1] /home/melker/.gradle/caches/transforms-4/ca3d169f8b7bfaad0eae09c1d409bfcf/transformed/ui-geometry-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.ui:ui-util-android:1.6.1] /home/melker/.gradle/caches/transforms-4/69fa3fb2b3a5796365934f7aa15cedb1/transformed/ui-util-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.ui:ui-text-android:1.6.1] /home/melker/.gradle/caches/transforms-4/b68264b4ca73dd84283b6fa028142757/transformed/ui-text-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.ui:ui-graphics-android:1.6.1] /home/melker/.gradle/caches/transforms-4/5d5c25f0b7fcc0ff91c4c880b4c795bd/transformed/ui-graphics-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.ui:ui-tooling-preview-android:1.6.1] /home/melker/.gradle/caches/transforms-4/ce03717075ead043e1f427cf2f17e70c/transformed/ui-tooling-preview-release/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.compose.ui:ui-tooling-android:1.6.1] /home/melker/.gradle/caches/transforms-4/14cfcf30851c4cbfaaf4ced6bda238b4/transformed/ui-tooling-release/AndroidManifest.xml:17:1-28:12
+MERGED from [androidx.activity:activity-compose:1.8.2] /home/melker/.gradle/caches/transforms-4/1ec249ca2ebf02cbb5ce0d46e5358bd8/transformed/activity-compose-1.8.2/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.emoji2:emoji2:1.3.0] /home/melker/.gradle/caches/transforms-4/7f9e892b85f5d35be76496bed94b308b/transformed/emoji2-1.3.0/AndroidManifest.xml:17:1-35:12
+MERGED from [androidx.lifecycle:lifecycle-process:2.7.0] /home/melker/.gradle/caches/transforms-4/c6d676d3aa000e490d6e832df5050404/transformed/lifecycle-process-2.7.0/AndroidManifest.xml:17:1-35:12
+MERGED from [androidx.lifecycle:lifecycle-livedata-core:2.7.0] /home/melker/.gradle/caches/transforms-4/c4c9bb2d5a8b0c44b3c6230ba5dedf61/transformed/lifecycle-livedata-core-2.7.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-savedstate:2.7.0] /home/melker/.gradle/caches/transforms-4/c70b0884f6148900d62fc40ef924241f/transformed/lifecycle-viewmodel-savedstate-2.7.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0] /home/melker/.gradle/caches/transforms-4/2b776cd82494142e140961f494dc1416/transformed/lifecycle-viewmodel-ktx-2.7.0/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.savedstate:savedstate-ktx:1.2.1] /home/melker/.gradle/caches/transforms-4/0cda9497ab8c82470c63d303a4f21532/transformed/savedstate-ktx-1.2.1/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.savedstate:savedstate:1.2.1] /home/melker/.gradle/caches/transforms-4/c1e92691748f6e852e00c7d93904aa75/transformed/savedstate-1.2.1/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.lifecycle:lifecycle-viewmodel:2.7.0] /home/melker/.gradle/caches/transforms-4/b575549e9bec65b385e0cc42185ab7f1/transformed/lifecycle-viewmodel-2.7.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.lifecycle:lifecycle-runtime:2.7.0] /home/melker/.gradle/caches/transforms-4/9ae628ccfb0bbeae9cf3f209b612cbcc/transformed/lifecycle-runtime-2.7.0/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.lifecycle:lifecycle-runtime-ktx:2.7.0] /home/melker/.gradle/caches/transforms-4/3beaeba1287669cf013eebbf80cd1a59/transformed/lifecycle-runtime-ktx-2.7.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.lifecycle:lifecycle-service:2.7.0] /home/melker/.gradle/caches/transforms-4/f5ebe792b66b83f233a54622a9ea674e/transformed/lifecycle-service-2.7.0/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0] /home/melker/.gradle/caches/transforms-4/49cef5e11e7eb1efc3f9ba795869bbcc/transformed/lifecycle-viewmodel-compose-2.7.0/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.ui:ui-android:1.6.1] /home/melker/.gradle/caches/transforms-4/5b627401793594ed155b6ca5e59d836e/transformed/ui-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.autofill:autofill:1.0.0] /home/melker/.gradle/caches/transforms-4/5de36cf9daa8cfc03ee8bddb855b31bf/transformed/autofill-1.0.0/AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.core:core:1.12.0] /home/melker/.gradle/caches/transforms-4/d68400a91416e00b990a377d8f722f76/transformed/core-1.12.0/AndroidManifest.xml:17:1-30:12
+MERGED from [androidx.customview:customview-poolingcontainer:1.0.0] /home/melker/.gradle/caches/transforms-4/e14645b8132c0b2f4005b1439d0009f2/transformed/customview-poolingcontainer-1.0.0/AndroidManifest.xml:17:1-23:12
+MERGED from [androidx.core:core-ktx:1.12.0] /home/melker/.gradle/caches/transforms-4/3324c5999f4a0e4f621a458a97ce3585/transformed/core-ktx-1.12.0/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.datastore:datastore-preferences:1.0.0] /home/melker/.gradle/caches/transforms-4/d92774569030ebe0406190ac3e124b18/transformed/datastore-preferences-1.0.0/AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.datastore:datastore:1.0.0] /home/melker/.gradle/caches/transforms-4/78bf5bae0e8f04b605bb7c0337722e90/transformed/datastore-1.0.0/AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.compose.runtime:runtime-saveable-android:1.6.1] /home/melker/.gradle/caches/transforms-4/6305f684d063c2001fdf4dfaba698f39/transformed/runtime-saveable-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.runtime:runtime-android:1.6.1] /home/melker/.gradle/caches/transforms-4/98eda48881af6cc8d555ade7b4958d28/transformed/runtime-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.annotation:annotation-experimental:1.4.0] /home/melker/.gradle/caches/transforms-4/1f232113d7e1454d43622c97f994d5b0/transformed/annotation-experimental-1.4.0/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] /home/melker/.gradle/caches/transforms-4/a9b006e625f1a35da9869da00ddd34fe/transformed/versionedparcelable-1.1.1/AndroidManifest.xml:17:1-27:12
+MERGED from [androidx.interpolator:interpolator:1.0.0] /home/melker/.gradle/caches/transforms-4/8c483ec9fec38bab23dc6f6a0ba550be/transformed/interpolator-1.0.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.arch.core:core-runtime:2.2.0] /home/melker/.gradle/caches/transforms-4/aff8f5d6ed6dec0400e802f248f17662/transformed/core-runtime-2.2.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.profileinstaller:profileinstaller:1.3.0] /home/melker/.gradle/caches/transforms-4/32d6ab720d42088de8e4b7afa5b0f81d/transformed/profileinstaller-1.3.0/AndroidManifest.xml:17:1-55:12
+MERGED from [androidx.startup:startup-runtime:1.1.1] /home/melker/.gradle/caches/transforms-4/d26ae36dd08708bdd045928c3f187239/transformed/startup-runtime-1.1.1/AndroidManifest.xml:17:1-33:12
+MERGED from [androidx.tracing:tracing:1.0.0] /home/melker/.gradle/caches/transforms-4/5f0b122a0c7e2e227933cc798d8be101/transformed/tracing-1.0.0/AndroidManifest.xml:17:1-24:12
+	package
+		INJECTED from /home/melker/Desktop/code/plans/local_github/android/app/src/main/AndroidManifest.xml
+	android:versionName
+		INJECTED from /home/melker/Desktop/code/plans/local_github/android/app/src/main/AndroidManifest.xml
+	android:versionCode
+		INJECTED from /home/melker/Desktop/code/plans/local_github/android/app/src/main/AndroidManifest.xml
+	xmlns:android
+		ADDED from /home/melker/Desktop/code/plans/local_github/android/app/src/main/AndroidManifest.xml:2:11-69
+uses-permission#android.permission.INTERNET
+ADDED from /home/melker/Desktop/code/plans/local_github/android/app/src/main/AndroidManifest.xml:5:5-67
+	android:name
+		ADDED from /home/melker/Desktop/code/plans/local_github/android/app/src/main/AndroidManifest.xml:5:22-64
+uses-permission#android.permission.ACCESS_NETWORK_STATE
+ADDED from /home/melker/Desktop/code/plans/local_github/android/app/src/main/AndroidManifest.xml:6:5-79
+	android:name
+		ADDED from /home/melker/Desktop/code/plans/local_github/android/app/src/main/AndroidManifest.xml:6:22-76
+uses-permission#android.permission.ACCESS_WIFI_STATE
+ADDED from /home/melker/Desktop/code/plans/local_github/android/app/src/main/AndroidManifest.xml:7:5-76
+	android:name
+		ADDED from /home/melker/Desktop/code/plans/local_github/android/app/src/main/AndroidManifest.xml:7:22-73
+uses-permission#android.permission.CHANGE_WIFI_MULTICAST_STATE
+ADDED from /home/melker/Desktop/code/plans/local_github/android/app/src/main/AndroidManifest.xml:8:5-86
+	android:name
+		ADDED from /home/melker/Desktop/code/plans/local_github/android/app/src/main/AndroidManifest.xml:8:22-83
+uses-permission#android.permission.FOREGROUND_SERVICE
+ADDED from /home/melker/Desktop/code/plans/local_github/android/app/src/main/AndroidManifest.xml:11:5-77
+	android:name
+		ADDED from /home/melker/Desktop/code/plans/local_github/android/app/src/main/AndroidManifest.xml:11:22-74
+uses-permission#android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE
+ADDED from /home/melker/Desktop/code/plans/local_github/android/app/src/main/AndroidManifest.xml:12:5-94
+	android:name
+		ADDED from /home/melker/Desktop/code/plans/local_github/android/app/src/main/AndroidManifest.xml:12:22-91
+uses-permission#android.permission.POST_NOTIFICATIONS
+ADDED from /home/melker/Desktop/code/plans/local_github/android/app/src/main/AndroidManifest.xml:15:5-77
+	android:name
+		ADDED from /home/melker/Desktop/code/plans/local_github/android/app/src/main/AndroidManifest.xml:15:22-74
+application
+ADDED from /home/melker/Desktop/code/plans/local_github/android/app/src/main/AndroidManifest.xml:17:5-42:19
+INJECTED from /home/melker/Desktop/code/plans/local_github/android/app/src/main/AndroidManifest.xml:17:5-42:19
+MERGED from [androidx.compose.ui:ui-tooling-android:1.6.1] /home/melker/.gradle/caches/transforms-4/14cfcf30851c4cbfaaf4ced6bda238b4/transformed/ui-tooling-release/AndroidManifest.xml:22:5-26:19
+MERGED from [androidx.compose.ui:ui-tooling-android:1.6.1] /home/melker/.gradle/caches/transforms-4/14cfcf30851c4cbfaaf4ced6bda238b4/transformed/ui-tooling-release/AndroidManifest.xml:22:5-26:19
+MERGED from [androidx.emoji2:emoji2:1.3.0] /home/melker/.gradle/caches/transforms-4/7f9e892b85f5d35be76496bed94b308b/transformed/emoji2-1.3.0/AndroidManifest.xml:23:5-33:19
+MERGED from [androidx.emoji2:emoji2:1.3.0] /home/melker/.gradle/caches/transforms-4/7f9e892b85f5d35be76496bed94b308b/transformed/emoji2-1.3.0/AndroidManifest.xml:23:5-33:19
+MERGED from [androidx.lifecycle:lifecycle-process:2.7.0] /home/melker/.gradle/caches/transforms-4/c6d676d3aa000e490d6e832df5050404/transformed/lifecycle-process-2.7.0/AndroidManifest.xml:23:5-33:19
+MERGED from [androidx.lifecycle:lifecycle-process:2.7.0] /home/melker/.gradle/caches/transforms-4/c6d676d3aa000e490d6e832df5050404/transformed/lifecycle-process-2.7.0/AndroidManifest.xml:23:5-33:19
+MERGED from [androidx.core:core:1.12.0] /home/melker/.gradle/caches/transforms-4/d68400a91416e00b990a377d8f722f76/transformed/core-1.12.0/AndroidManifest.xml:28:5-89
+MERGED from [androidx.core:core:1.12.0] /home/melker/.gradle/caches/transforms-4/d68400a91416e00b990a377d8f722f76/transformed/core-1.12.0/AndroidManifest.xml:28:5-89
+MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] /home/melker/.gradle/caches/transforms-4/a9b006e625f1a35da9869da00ddd34fe/transformed/versionedparcelable-1.1.1/AndroidManifest.xml:24:5-25:19
+MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] /home/melker/.gradle/caches/transforms-4/a9b006e625f1a35da9869da00ddd34fe/transformed/versionedparcelable-1.1.1/AndroidManifest.xml:24:5-25:19
+MERGED from [androidx.profileinstaller:profileinstaller:1.3.0] /home/melker/.gradle/caches/transforms-4/32d6ab720d42088de8e4b7afa5b0f81d/transformed/profileinstaller-1.3.0/AndroidManifest.xml:23:5-53:19
+MERGED from [androidx.profileinstaller:profileinstaller:1.3.0] /home/melker/.gradle/caches/transforms-4/32d6ab720d42088de8e4b7afa5b0f81d/transformed/profileinstaller-1.3.0/AndroidManifest.xml:23:5-53:19
+MERGED from [androidx.startup:startup-runtime:1.1.1] /home/melker/.gradle/caches/transforms-4/d26ae36dd08708bdd045928c3f187239/transformed/startup-runtime-1.1.1/AndroidManifest.xml:25:5-31:19
+MERGED from [androidx.startup:startup-runtime:1.1.1] /home/melker/.gradle/caches/transforms-4/d26ae36dd08708bdd045928c3f187239/transformed/startup-runtime-1.1.1/AndroidManifest.xml:25:5-31:19
+	android:extractNativeLibs
+		INJECTED from /home/melker/Desktop/code/plans/local_github/android/app/src/main/AndroidManifest.xml
+	android:appComponentFactory
+		ADDED from [androidx.core:core:1.12.0] /home/melker/.gradle/caches/transforms-4/d68400a91416e00b990a377d8f722f76/transformed/core-1.12.0/AndroidManifest.xml:28:18-86
+	android:label
+		ADDED from /home/melker/Desktop/code/plans/local_github/android/app/src/main/AndroidManifest.xml:19:9-41
+	android:fullBackupContent
+		ADDED from /home/melker/Desktop/code/plans/local_github/android/app/src/main/AndroidManifest.xml:25:9-54
+	android:roundIcon
+		ADDED from /home/melker/Desktop/code/plans/local_github/android/app/src/main/AndroidManifest.xml:21:9-54
+	android:icon
+		ADDED from /home/melker/Desktop/code/plans/local_github/android/app/src/main/AndroidManifest.xml:20:9-43
+	android:allowBackup
+		ADDED from /home/melker/Desktop/code/plans/local_github/android/app/src/main/AndroidManifest.xml:23:9-35
+	android:theme
+		ADDED from /home/melker/Desktop/code/plans/local_github/android/app/src/main/AndroidManifest.xml:22:9-45
+	android:dataExtractionRules
+		ADDED from /home/melker/Desktop/code/plans/local_github/android/app/src/main/AndroidManifest.xml:24:9-65
+	android:name
+		ADDED from /home/melker/Desktop/code/plans/local_github/android/app/src/main/AndroidManifest.xml:18:9-35
+activity#com.localgithub.githost.MainActivity
+ADDED from /home/melker/Desktop/code/plans/local_github/android/app/src/main/AndroidManifest.xml:27:9-35:20
+	android:windowSoftInputMode
+		ADDED from /home/melker/Desktop/code/plans/local_github/android/app/src/main/AndroidManifest.xml:30:13-55
+	android:exported
+		ADDED from /home/melker/Desktop/code/plans/local_github/android/app/src/main/AndroidManifest.xml:29:13-36
+	android:name
+		ADDED from /home/melker/Desktop/code/plans/local_github/android/app/src/main/AndroidManifest.xml:28:13-41
+intent-filter#action:name:android.intent.action.MAIN+category:name:android.intent.category.LAUNCHER
+ADDED from /home/melker/Desktop/code/plans/local_github/android/app/src/main/AndroidManifest.xml:31:13-34:29
+action#android.intent.action.MAIN
+ADDED from /home/melker/Desktop/code/plans/local_github/android/app/src/main/AndroidManifest.xml:32:17-69
+	android:name
+		ADDED from /home/melker/Desktop/code/plans/local_github/android/app/src/main/AndroidManifest.xml:32:25-66
+category#android.intent.category.LAUNCHER
+ADDED from /home/melker/Desktop/code/plans/local_github/android/app/src/main/AndroidManifest.xml:33:17-77
+	android:name
+		ADDED from /home/melker/Desktop/code/plans/local_github/android/app/src/main/AndroidManifest.xml:33:27-74
+service#com.localgithub.githost.service.GitHostService
+ADDED from /home/melker/Desktop/code/plans/local_github/android/app/src/main/AndroidManifest.xml:37:9-40:63
+	android:exported
+		ADDED from /home/melker/Desktop/code/plans/local_github/android/app/src/main/AndroidManifest.xml:39:13-37
+	android:foregroundServiceType
+		ADDED from /home/melker/Desktop/code/plans/local_github/android/app/src/main/AndroidManifest.xml:40:13-60
+	android:name
+		ADDED from /home/melker/Desktop/code/plans/local_github/android/app/src/main/AndroidManifest.xml:38:13-51
+uses-sdk
+INJECTED from /home/melker/Desktop/code/plans/local_github/android/app/src/main/AndroidManifest.xml reason: use-sdk injection requested
+INJECTED from /home/melker/Desktop/code/plans/local_github/android/app/src/main/AndroidManifest.xml
+INJECTED from /home/melker/Desktop/code/plans/local_github/android/app/src/main/AndroidManifest.xml
+MERGED from [androidx.navigation:navigation-common:2.7.7] /home/melker/.gradle/caches/transforms-4/da4fe9f2c312b38b4d3fab9d81287b94/transformed/navigation-common-2.7.7/AndroidManifest.xml:20:5-44
+MERGED from [androidx.navigation:navigation-common:2.7.7] /home/melker/.gradle/caches/transforms-4/da4fe9f2c312b38b4d3fab9d81287b94/transformed/navigation-common-2.7.7/AndroidManifest.xml:20:5-44
+MERGED from [androidx.navigation:navigation-runtime:2.7.7] /home/melker/.gradle/caches/transforms-4/9b6e2a4d968b6cca917fed3c593cef22/transformed/navigation-runtime-2.7.7/AndroidManifest.xml:20:5-44
+MERGED from [androidx.navigation:navigation-runtime:2.7.7] /home/melker/.gradle/caches/transforms-4/9b6e2a4d968b6cca917fed3c593cef22/transformed/navigation-runtime-2.7.7/AndroidManifest.xml:20:5-44
+MERGED from [androidx.navigation:navigation-common-ktx:2.7.7] /home/melker/.gradle/caches/transforms-4/3121a955623eb80e8892c697a8497564/transformed/navigation-common-ktx-2.7.7/AndroidManifest.xml:5:5-44
+MERGED from [androidx.navigation:navigation-common-ktx:2.7.7] /home/melker/.gradle/caches/transforms-4/3121a955623eb80e8892c697a8497564/transformed/navigation-common-ktx-2.7.7/AndroidManifest.xml:5:5-44
+MERGED from [androidx.navigation:navigation-runtime-ktx:2.7.7] /home/melker/.gradle/caches/transforms-4/f3f04bc4e3479a959609997cc9662063/transformed/navigation-runtime-ktx-2.7.7/AndroidManifest.xml:5:5-44
+MERGED from [androidx.navigation:navigation-runtime-ktx:2.7.7] /home/melker/.gradle/caches/transforms-4/f3f04bc4e3479a959609997cc9662063/transformed/navigation-runtime-ktx-2.7.7/AndroidManifest.xml:5:5-44
+MERGED from [androidx.navigation:navigation-compose:2.7.7] /home/melker/.gradle/caches/transforms-4/213b1d65b91b47a51925cbbaef2492d7/transformed/navigation-compose-2.7.7/AndroidManifest.xml:5:5-44
+MERGED from [androidx.navigation:navigation-compose:2.7.7] /home/melker/.gradle/caches/transforms-4/213b1d65b91b47a51925cbbaef2492d7/transformed/navigation-compose-2.7.7/AndroidManifest.xml:5:5-44
+MERGED from [androidx.activity:activity:1.8.2] /home/melker/.gradle/caches/transforms-4/ab6dea4869acb16c1a4b4f9f291169c4/transformed/activity-1.8.2/AndroidManifest.xml:20:5-44
+MERGED from [androidx.activity:activity:1.8.2] /home/melker/.gradle/caches/transforms-4/ab6dea4869acb16c1a4b4f9f291169c4/transformed/activity-1.8.2/AndroidManifest.xml:20:5-44
+MERGED from [androidx.activity:activity-ktx:1.8.2] /home/melker/.gradle/caches/transforms-4/9be0447809eb54cbe80c03a81076a74d/transformed/activity-ktx-1.8.2/AndroidManifest.xml:5:5-44
+MERGED from [androidx.activity:activity-ktx:1.8.2] /home/melker/.gradle/caches/transforms-4/9be0447809eb54cbe80c03a81076a74d/transformed/activity-ktx-1.8.2/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.material3:material3-android:1.2.0] /home/melker/.gradle/caches/transforms-4/769734522087fdcbf47af4397c854b04/transformed/material3-release/AndroidManifest.xml:20:5-44
+MERGED from [androidx.compose.material3:material3-android:1.2.0] /home/melker/.gradle/caches/transforms-4/769734522087fdcbf47af4397c854b04/transformed/material3-release/AndroidManifest.xml:20:5-44
+MERGED from [androidx.compose.material:material-android:1.6.1] /home/melker/.gradle/caches/transforms-4/d210ecbdaef71c112bf6d7e77a33ac6f/transformed/material-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.material:material-android:1.6.1] /home/melker/.gradle/caches/transforms-4/d210ecbdaef71c112bf6d7e77a33ac6f/transformed/material-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.material:material-icons-core-android:1.6.1] /home/melker/.gradle/caches/transforms-4/51e22fadd54df6195a26087693803002/transformed/material-icons-core-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.material:material-icons-core-android:1.6.1] /home/melker/.gradle/caches/transforms-4/51e22fadd54df6195a26087693803002/transformed/material-icons-core-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.material:material-icons-extended-android:1.6.1] /home/melker/.gradle/caches/transforms-4/ee236d7d9667600ede643661d0d19a58/transformed/material-icons-extended-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.material:material-icons-extended-android:1.6.1] /home/melker/.gradle/caches/transforms-4/ee236d7d9667600ede643661d0d19a58/transformed/material-icons-extended-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.material:material-ripple-android:1.6.1] /home/melker/.gradle/caches/transforms-4/54b1f9fe54ee32783b940aac41db3b57/transformed/material-ripple-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.material:material-ripple-android:1.6.1] /home/melker/.gradle/caches/transforms-4/54b1f9fe54ee32783b940aac41db3b57/transformed/material-ripple-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.animation:animation-core-android:1.6.1] /home/melker/.gradle/caches/transforms-4/2597dc909e749dd86c55958e2b9ddb88/transformed/animation-core-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.animation:animation-core-android:1.6.1] /home/melker/.gradle/caches/transforms-4/2597dc909e749dd86c55958e2b9ddb88/transformed/animation-core-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.animation:animation-android:1.6.1] /home/melker/.gradle/caches/transforms-4/9dac12f6fd3d2bdd4fded6efd39557e0/transformed/animation-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.animation:animation-android:1.6.1] /home/melker/.gradle/caches/transforms-4/9dac12f6fd3d2bdd4fded6efd39557e0/transformed/animation-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.foundation:foundation-layout-android:1.6.1] /home/melker/.gradle/caches/transforms-4/9f6f3cdbc3b55e37df2b153f441689f1/transformed/foundation-layout-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.foundation:foundation-layout-android:1.6.1] /home/melker/.gradle/caches/transforms-4/9f6f3cdbc3b55e37df2b153f441689f1/transformed/foundation-layout-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.foundation:foundation-android:1.6.1] /home/melker/.gradle/caches/transforms-4/3e943e31d8d4c1be37c7929fbca94bbd/transformed/foundation-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.foundation:foundation-android:1.6.1] /home/melker/.gradle/caches/transforms-4/3e943e31d8d4c1be37c7929fbca94bbd/transformed/foundation-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-tooling-data-android:1.6.1] /home/melker/.gradle/caches/transforms-4/2658512c31d1fe6780709c77d192bd8c/transformed/ui-tooling-data-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-tooling-data-android:1.6.1] /home/melker/.gradle/caches/transforms-4/2658512c31d1fe6780709c77d192bd8c/transformed/ui-tooling-data-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-unit-android:1.6.1] /home/melker/.gradle/caches/transforms-4/b762174b487358f28815c6f47b21af5c/transformed/ui-unit-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-unit-android:1.6.1] /home/melker/.gradle/caches/transforms-4/b762174b487358f28815c6f47b21af5c/transformed/ui-unit-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-geometry-android:1.6.1] /home/melker/.gradle/caches/transforms-4/ca3d169f8b7bfaad0eae09c1d409bfcf/transformed/ui-geometry-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-geometry-android:1.6.1] /home/melker/.gradle/caches/transforms-4/ca3d169f8b7bfaad0eae09c1d409bfcf/transformed/ui-geometry-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-util-android:1.6.1] /home/melker/.gradle/caches/transforms-4/69fa3fb2b3a5796365934f7aa15cedb1/transformed/ui-util-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-util-android:1.6.1] /home/melker/.gradle/caches/transforms-4/69fa3fb2b3a5796365934f7aa15cedb1/transformed/ui-util-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-text-android:1.6.1] /home/melker/.gradle/caches/transforms-4/b68264b4ca73dd84283b6fa028142757/transformed/ui-text-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-text-android:1.6.1] /home/melker/.gradle/caches/transforms-4/b68264b4ca73dd84283b6fa028142757/transformed/ui-text-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-graphics-android:1.6.1] /home/melker/.gradle/caches/transforms-4/5d5c25f0b7fcc0ff91c4c880b4c795bd/transformed/ui-graphics-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-graphics-android:1.6.1] /home/melker/.gradle/caches/transforms-4/5d5c25f0b7fcc0ff91c4c880b4c795bd/transformed/ui-graphics-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-tooling-preview-android:1.6.1] /home/melker/.gradle/caches/transforms-4/ce03717075ead043e1f427cf2f17e70c/transformed/ui-tooling-preview-release/AndroidManifest.xml:20:5-44
+MERGED from [androidx.compose.ui:ui-tooling-preview-android:1.6.1] /home/melker/.gradle/caches/transforms-4/ce03717075ead043e1f427cf2f17e70c/transformed/ui-tooling-preview-release/AndroidManifest.xml:20:5-44
+MERGED from [androidx.compose.ui:ui-tooling-android:1.6.1] /home/melker/.gradle/caches/transforms-4/14cfcf30851c4cbfaaf4ced6bda238b4/transformed/ui-tooling-release/AndroidManifest.xml:20:5-44
+MERGED from [androidx.compose.ui:ui-tooling-android:1.6.1] /home/melker/.gradle/caches/transforms-4/14cfcf30851c4cbfaaf4ced6bda238b4/transformed/ui-tooling-release/AndroidManifest.xml:20:5-44
+MERGED from [androidx.activity:activity-compose:1.8.2] /home/melker/.gradle/caches/transforms-4/1ec249ca2ebf02cbb5ce0d46e5358bd8/transformed/activity-compose-1.8.2/AndroidManifest.xml:5:5-44
+MERGED from [androidx.activity:activity-compose:1.8.2] /home/melker/.gradle/caches/transforms-4/1ec249ca2ebf02cbb5ce0d46e5358bd8/transformed/activity-compose-1.8.2/AndroidManifest.xml:5:5-44
+MERGED from [androidx.emoji2:emoji2:1.3.0] /home/melker/.gradle/caches/transforms-4/7f9e892b85f5d35be76496bed94b308b/transformed/emoji2-1.3.0/AndroidManifest.xml:21:5-44
+MERGED from [androidx.emoji2:emoji2:1.3.0] /home/melker/.gradle/caches/transforms-4/7f9e892b85f5d35be76496bed94b308b/transformed/emoji2-1.3.0/AndroidManifest.xml:21:5-44
+MERGED from [androidx.lifecycle:lifecycle-process:2.7.0] /home/melker/.gradle/caches/transforms-4/c6d676d3aa000e490d6e832df5050404/transformed/lifecycle-process-2.7.0/AndroidManifest.xml:21:5-44
+MERGED from [androidx.lifecycle:lifecycle-process:2.7.0] /home/melker/.gradle/caches/transforms-4/c6d676d3aa000e490d6e832df5050404/transformed/lifecycle-process-2.7.0/AndroidManifest.xml:21:5-44
+MERGED from [androidx.lifecycle:lifecycle-livedata-core:2.7.0] /home/melker/.gradle/caches/transforms-4/c4c9bb2d5a8b0c44b3c6230ba5dedf61/transformed/lifecycle-livedata-core-2.7.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-livedata-core:2.7.0] /home/melker/.gradle/caches/transforms-4/c4c9bb2d5a8b0c44b3c6230ba5dedf61/transformed/lifecycle-livedata-core-2.7.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-savedstate:2.7.0] /home/melker/.gradle/caches/transforms-4/c70b0884f6148900d62fc40ef924241f/transformed/lifecycle-viewmodel-savedstate-2.7.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-savedstate:2.7.0] /home/melker/.gradle/caches/transforms-4/c70b0884f6148900d62fc40ef924241f/transformed/lifecycle-viewmodel-savedstate-2.7.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0] /home/melker/.gradle/caches/transforms-4/2b776cd82494142e140961f494dc1416/transformed/lifecycle-viewmodel-ktx-2.7.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0] /home/melker/.gradle/caches/transforms-4/2b776cd82494142e140961f494dc1416/transformed/lifecycle-viewmodel-ktx-2.7.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.savedstate:savedstate-ktx:1.2.1] /home/melker/.gradle/caches/transforms-4/0cda9497ab8c82470c63d303a4f21532/transformed/savedstate-ktx-1.2.1/AndroidManifest.xml:20:5-44
+MERGED from [androidx.savedstate:savedstate-ktx:1.2.1] /home/melker/.gradle/caches/transforms-4/0cda9497ab8c82470c63d303a4f21532/transformed/savedstate-ktx-1.2.1/AndroidManifest.xml:20:5-44
+MERGED from [androidx.savedstate:savedstate:1.2.1] /home/melker/.gradle/caches/transforms-4/c1e92691748f6e852e00c7d93904aa75/transformed/savedstate-1.2.1/AndroidManifest.xml:20:5-44
+MERGED from [androidx.savedstate:savedstate:1.2.1] /home/melker/.gradle/caches/transforms-4/c1e92691748f6e852e00c7d93904aa75/transformed/savedstate-1.2.1/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel:2.7.0] /home/melker/.gradle/caches/transforms-4/b575549e9bec65b385e0cc42185ab7f1/transformed/lifecycle-viewmodel-2.7.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel:2.7.0] /home/melker/.gradle/caches/transforms-4/b575549e9bec65b385e0cc42185ab7f1/transformed/lifecycle-viewmodel-2.7.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-runtime:2.7.0] /home/melker/.gradle/caches/transforms-4/9ae628ccfb0bbeae9cf3f209b612cbcc/transformed/lifecycle-runtime-2.7.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-runtime:2.7.0] /home/melker/.gradle/caches/transforms-4/9ae628ccfb0bbeae9cf3f209b612cbcc/transformed/lifecycle-runtime-2.7.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-runtime-ktx:2.7.0] /home/melker/.gradle/caches/transforms-4/3beaeba1287669cf013eebbf80cd1a59/transformed/lifecycle-runtime-ktx-2.7.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-runtime-ktx:2.7.0] /home/melker/.gradle/caches/transforms-4/3beaeba1287669cf013eebbf80cd1a59/transformed/lifecycle-runtime-ktx-2.7.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-service:2.7.0] /home/melker/.gradle/caches/transforms-4/f5ebe792b66b83f233a54622a9ea674e/transformed/lifecycle-service-2.7.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-service:2.7.0] /home/melker/.gradle/caches/transforms-4/f5ebe792b66b83f233a54622a9ea674e/transformed/lifecycle-service-2.7.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0] /home/melker/.gradle/caches/transforms-4/49cef5e11e7eb1efc3f9ba795869bbcc/transformed/lifecycle-viewmodel-compose-2.7.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0] /home/melker/.gradle/caches/transforms-4/49cef5e11e7eb1efc3f9ba795869bbcc/transformed/lifecycle-viewmodel-compose-2.7.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-android:1.6.1] /home/melker/.gradle/caches/transforms-4/5b627401793594ed155b6ca5e59d836e/transformed/ui-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-android:1.6.1] /home/melker/.gradle/caches/transforms-4/5b627401793594ed155b6ca5e59d836e/transformed/ui-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.autofill:autofill:1.0.0] /home/melker/.gradle/caches/transforms-4/5de36cf9daa8cfc03ee8bddb855b31bf/transformed/autofill-1.0.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.autofill:autofill:1.0.0] /home/melker/.gradle/caches/transforms-4/5de36cf9daa8cfc03ee8bddb855b31bf/transformed/autofill-1.0.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.core:core:1.12.0] /home/melker/.gradle/caches/transforms-4/d68400a91416e00b990a377d8f722f76/transformed/core-1.12.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.core:core:1.12.0] /home/melker/.gradle/caches/transforms-4/d68400a91416e00b990a377d8f722f76/transformed/core-1.12.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.customview:customview-poolingcontainer:1.0.0] /home/melker/.gradle/caches/transforms-4/e14645b8132c0b2f4005b1439d0009f2/transformed/customview-poolingcontainer-1.0.0/AndroidManifest.xml:20:5-21:38
+MERGED from [androidx.customview:customview-poolingcontainer:1.0.0] /home/melker/.gradle/caches/transforms-4/e14645b8132c0b2f4005b1439d0009f2/transformed/customview-poolingcontainer-1.0.0/AndroidManifest.xml:20:5-21:38
+MERGED from [androidx.core:core-ktx:1.12.0] /home/melker/.gradle/caches/transforms-4/3324c5999f4a0e4f621a458a97ce3585/transformed/core-ktx-1.12.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.core:core-ktx:1.12.0] /home/melker/.gradle/caches/transforms-4/3324c5999f4a0e4f621a458a97ce3585/transformed/core-ktx-1.12.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.datastore:datastore-preferences:1.0.0] /home/melker/.gradle/caches/transforms-4/d92774569030ebe0406190ac3e124b18/transformed/datastore-preferences-1.0.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.datastore:datastore-preferences:1.0.0] /home/melker/.gradle/caches/transforms-4/d92774569030ebe0406190ac3e124b18/transformed/datastore-preferences-1.0.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.datastore:datastore:1.0.0] /home/melker/.gradle/caches/transforms-4/78bf5bae0e8f04b605bb7c0337722e90/transformed/datastore-1.0.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.datastore:datastore:1.0.0] /home/melker/.gradle/caches/transforms-4/78bf5bae0e8f04b605bb7c0337722e90/transformed/datastore-1.0.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.compose.runtime:runtime-saveable-android:1.6.1] /home/melker/.gradle/caches/transforms-4/6305f684d063c2001fdf4dfaba698f39/transformed/runtime-saveable-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.runtime:runtime-saveable-android:1.6.1] /home/melker/.gradle/caches/transforms-4/6305f684d063c2001fdf4dfaba698f39/transformed/runtime-saveable-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.runtime:runtime-android:1.6.1] /home/melker/.gradle/caches/transforms-4/98eda48881af6cc8d555ade7b4958d28/transformed/runtime-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.runtime:runtime-android:1.6.1] /home/melker/.gradle/caches/transforms-4/98eda48881af6cc8d555ade7b4958d28/transformed/runtime-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.annotation:annotation-experimental:1.4.0] /home/melker/.gradle/caches/transforms-4/1f232113d7e1454d43622c97f994d5b0/transformed/annotation-experimental-1.4.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.annotation:annotation-experimental:1.4.0] /home/melker/.gradle/caches/transforms-4/1f232113d7e1454d43622c97f994d5b0/transformed/annotation-experimental-1.4.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] /home/melker/.gradle/caches/transforms-4/a9b006e625f1a35da9869da00ddd34fe/transformed/versionedparcelable-1.1.1/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] /home/melker/.gradle/caches/transforms-4/a9b006e625f1a35da9869da00ddd34fe/transformed/versionedparcelable-1.1.1/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.interpolator:interpolator:1.0.0] /home/melker/.gradle/caches/transforms-4/8c483ec9fec38bab23dc6f6a0ba550be/transformed/interpolator-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.interpolator:interpolator:1.0.0] /home/melker/.gradle/caches/transforms-4/8c483ec9fec38bab23dc6f6a0ba550be/transformed/interpolator-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.arch.core:core-runtime:2.2.0] /home/melker/.gradle/caches/transforms-4/aff8f5d6ed6dec0400e802f248f17662/transformed/core-runtime-2.2.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.arch.core:core-runtime:2.2.0] /home/melker/.gradle/caches/transforms-4/aff8f5d6ed6dec0400e802f248f17662/transformed/core-runtime-2.2.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.profileinstaller:profileinstaller:1.3.0] /home/melker/.gradle/caches/transforms-4/32d6ab720d42088de8e4b7afa5b0f81d/transformed/profileinstaller-1.3.0/AndroidManifest.xml:21:5-44
+MERGED from [androidx.profileinstaller:profileinstaller:1.3.0] /home/melker/.gradle/caches/transforms-4/32d6ab720d42088de8e4b7afa5b0f81d/transformed/profileinstaller-1.3.0/AndroidManifest.xml:21:5-44
+MERGED from [androidx.startup:startup-runtime:1.1.1] /home/melker/.gradle/caches/transforms-4/d26ae36dd08708bdd045928c3f187239/transformed/startup-runtime-1.1.1/AndroidManifest.xml:21:5-23:41
+MERGED from [androidx.startup:startup-runtime:1.1.1] /home/melker/.gradle/caches/transforms-4/d26ae36dd08708bdd045928c3f187239/transformed/startup-runtime-1.1.1/AndroidManifest.xml:21:5-23:41
+MERGED from [androidx.tracing:tracing:1.0.0] /home/melker/.gradle/caches/transforms-4/5f0b122a0c7e2e227933cc798d8be101/transformed/tracing-1.0.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.tracing:tracing:1.0.0] /home/melker/.gradle/caches/transforms-4/5f0b122a0c7e2e227933cc798d8be101/transformed/tracing-1.0.0/AndroidManifest.xml:20:5-22:41
+	android:targetSdkVersion
+		INJECTED from /home/melker/Desktop/code/plans/local_github/android/app/src/main/AndroidManifest.xml
+	android:minSdkVersion
+		INJECTED from /home/melker/Desktop/code/plans/local_github/android/app/src/main/AndroidManifest.xml
+activity#androidx.compose.ui.tooling.PreviewActivity
+ADDED from [androidx.compose.ui:ui-tooling-android:1.6.1] /home/melker/.gradle/caches/transforms-4/14cfcf30851c4cbfaaf4ced6bda238b4/transformed/ui-tooling-release/AndroidManifest.xml:23:9-25:39
+	android:exported
+		ADDED from [androidx.compose.ui:ui-tooling-android:1.6.1] /home/melker/.gradle/caches/transforms-4/14cfcf30851c4cbfaaf4ced6bda238b4/transformed/ui-tooling-release/AndroidManifest.xml:25:13-36
+	android:name
+		ADDED from [androidx.compose.ui:ui-tooling-android:1.6.1] /home/melker/.gradle/caches/transforms-4/14cfcf30851c4cbfaaf4ced6bda238b4/transformed/ui-tooling-release/AndroidManifest.xml:24:13-71
+provider#androidx.startup.InitializationProvider
+ADDED from [androidx.emoji2:emoji2:1.3.0] /home/melker/.gradle/caches/transforms-4/7f9e892b85f5d35be76496bed94b308b/transformed/emoji2-1.3.0/AndroidManifest.xml:24:9-32:20
+MERGED from [androidx.lifecycle:lifecycle-process:2.7.0] /home/melker/.gradle/caches/transforms-4/c6d676d3aa000e490d6e832df5050404/transformed/lifecycle-process-2.7.0/AndroidManifest.xml:24:9-32:20
+MERGED from [androidx.lifecycle:lifecycle-process:2.7.0] /home/melker/.gradle/caches/transforms-4/c6d676d3aa000e490d6e832df5050404/transformed/lifecycle-process-2.7.0/AndroidManifest.xml:24:9-32:20
+MERGED from [androidx.profileinstaller:profileinstaller:1.3.0] /home/melker/.gradle/caches/transforms-4/32d6ab720d42088de8e4b7afa5b0f81d/transformed/profileinstaller-1.3.0/AndroidManifest.xml:24:9-32:20
+MERGED from [androidx.profileinstaller:profileinstaller:1.3.0] /home/melker/.gradle/caches/transforms-4/32d6ab720d42088de8e4b7afa5b0f81d/transformed/profileinstaller-1.3.0/AndroidManifest.xml:24:9-32:20
+MERGED from [androidx.startup:startup-runtime:1.1.1] /home/melker/.gradle/caches/transforms-4/d26ae36dd08708bdd045928c3f187239/transformed/startup-runtime-1.1.1/AndroidManifest.xml:26:9-30:34
+MERGED from [androidx.startup:startup-runtime:1.1.1] /home/melker/.gradle/caches/transforms-4/d26ae36dd08708bdd045928c3f187239/transformed/startup-runtime-1.1.1/AndroidManifest.xml:26:9-30:34
+	tools:node
+		ADDED from [androidx.emoji2:emoji2:1.3.0] /home/melker/.gradle/caches/transforms-4/7f9e892b85f5d35be76496bed94b308b/transformed/emoji2-1.3.0/AndroidManifest.xml:28:13-31
+	android:authorities
+		ADDED from [androidx.emoji2:emoji2:1.3.0] /home/melker/.gradle/caches/transforms-4/7f9e892b85f5d35be76496bed94b308b/transformed/emoji2-1.3.0/AndroidManifest.xml:26:13-68
+	android:exported
+		ADDED from [androidx.emoji2:emoji2:1.3.0] /home/melker/.gradle/caches/transforms-4/7f9e892b85f5d35be76496bed94b308b/transformed/emoji2-1.3.0/AndroidManifest.xml:27:13-37
+	android:name
+		ADDED from [androidx.emoji2:emoji2:1.3.0] /home/melker/.gradle/caches/transforms-4/7f9e892b85f5d35be76496bed94b308b/transformed/emoji2-1.3.0/AndroidManifest.xml:25:13-67
+meta-data#androidx.emoji2.text.EmojiCompatInitializer
+ADDED from [androidx.emoji2:emoji2:1.3.0] /home/melker/.gradle/caches/transforms-4/7f9e892b85f5d35be76496bed94b308b/transformed/emoji2-1.3.0/AndroidManifest.xml:29:13-31:52
+	android:value
+		ADDED from [androidx.emoji2:emoji2:1.3.0] /home/melker/.gradle/caches/transforms-4/7f9e892b85f5d35be76496bed94b308b/transformed/emoji2-1.3.0/AndroidManifest.xml:31:17-49
+	android:name
+		ADDED from [androidx.emoji2:emoji2:1.3.0] /home/melker/.gradle/caches/transforms-4/7f9e892b85f5d35be76496bed94b308b/transformed/emoji2-1.3.0/AndroidManifest.xml:30:17-75
+meta-data#androidx.lifecycle.ProcessLifecycleInitializer
+ADDED from [androidx.lifecycle:lifecycle-process:2.7.0] /home/melker/.gradle/caches/transforms-4/c6d676d3aa000e490d6e832df5050404/transformed/lifecycle-process-2.7.0/AndroidManifest.xml:29:13-31:52
+	android:value
+		ADDED from [androidx.lifecycle:lifecycle-process:2.7.0] /home/melker/.gradle/caches/transforms-4/c6d676d3aa000e490d6e832df5050404/transformed/lifecycle-process-2.7.0/AndroidManifest.xml:31:17-49
+	android:name
+		ADDED from [androidx.lifecycle:lifecycle-process:2.7.0] /home/melker/.gradle/caches/transforms-4/c6d676d3aa000e490d6e832df5050404/transformed/lifecycle-process-2.7.0/AndroidManifest.xml:30:17-78
+permission#${applicationId}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
+ADDED from [androidx.core:core:1.12.0] /home/melker/.gradle/caches/transforms-4/d68400a91416e00b990a377d8f722f76/transformed/core-1.12.0/AndroidManifest.xml:22:5-24:47
+	android:protectionLevel
+		ADDED from [androidx.core:core:1.12.0] /home/melker/.gradle/caches/transforms-4/d68400a91416e00b990a377d8f722f76/transformed/core-1.12.0/AndroidManifest.xml:24:9-44
+	android:name
+		ADDED from [androidx.core:core:1.12.0] /home/melker/.gradle/caches/transforms-4/d68400a91416e00b990a377d8f722f76/transformed/core-1.12.0/AndroidManifest.xml:23:9-81
+permission#com.localgithub.githost.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
+ADDED from [androidx.core:core:1.12.0] /home/melker/.gradle/caches/transforms-4/d68400a91416e00b990a377d8f722f76/transformed/core-1.12.0/AndroidManifest.xml:22:5-24:47
+	android:protectionLevel
+		ADDED from [androidx.core:core:1.12.0] /home/melker/.gradle/caches/transforms-4/d68400a91416e00b990a377d8f722f76/transformed/core-1.12.0/AndroidManifest.xml:24:9-44
+	android:name
+		ADDED from [androidx.core:core:1.12.0] /home/melker/.gradle/caches/transforms-4/d68400a91416e00b990a377d8f722f76/transformed/core-1.12.0/AndroidManifest.xml:23:9-81
+uses-permission#${applicationId}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
+ADDED from [androidx.core:core:1.12.0] /home/melker/.gradle/caches/transforms-4/d68400a91416e00b990a377d8f722f76/transformed/core-1.12.0/AndroidManifest.xml:26:5-97
+	android:name
+		ADDED from [androidx.core:core:1.12.0] /home/melker/.gradle/caches/transforms-4/d68400a91416e00b990a377d8f722f76/transformed/core-1.12.0/AndroidManifest.xml:26:22-94
+uses-permission#com.localgithub.githost.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
+ADDED from [androidx.core:core:1.12.0] /home/melker/.gradle/caches/transforms-4/d68400a91416e00b990a377d8f722f76/transformed/core-1.12.0/AndroidManifest.xml:26:5-97
+	android:name
+		ADDED from [androidx.core:core:1.12.0] /home/melker/.gradle/caches/transforms-4/d68400a91416e00b990a377d8f722f76/transformed/core-1.12.0/AndroidManifest.xml:26:22-94
+meta-data#androidx.profileinstaller.ProfileInstallerInitializer
+ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /home/melker/.gradle/caches/transforms-4/32d6ab720d42088de8e4b7afa5b0f81d/transformed/profileinstaller-1.3.0/AndroidManifest.xml:29:13-31:52
+	android:value
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /home/melker/.gradle/caches/transforms-4/32d6ab720d42088de8e4b7afa5b0f81d/transformed/profileinstaller-1.3.0/AndroidManifest.xml:31:17-49
+	android:name
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /home/melker/.gradle/caches/transforms-4/32d6ab720d42088de8e4b7afa5b0f81d/transformed/profileinstaller-1.3.0/AndroidManifest.xml:30:17-85
+receiver#androidx.profileinstaller.ProfileInstallReceiver
+ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /home/melker/.gradle/caches/transforms-4/32d6ab720d42088de8e4b7afa5b0f81d/transformed/profileinstaller-1.3.0/AndroidManifest.xml:34:9-52:20
+	android:enabled
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /home/melker/.gradle/caches/transforms-4/32d6ab720d42088de8e4b7afa5b0f81d/transformed/profileinstaller-1.3.0/AndroidManifest.xml:37:13-35
+	android:exported
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /home/melker/.gradle/caches/transforms-4/32d6ab720d42088de8e4b7afa5b0f81d/transformed/profileinstaller-1.3.0/AndroidManifest.xml:38:13-36
+	android:permission
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /home/melker/.gradle/caches/transforms-4/32d6ab720d42088de8e4b7afa5b0f81d/transformed/profileinstaller-1.3.0/AndroidManifest.xml:39:13-57
+	android:directBootAware
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /home/melker/.gradle/caches/transforms-4/32d6ab720d42088de8e4b7afa5b0f81d/transformed/profileinstaller-1.3.0/AndroidManifest.xml:36:13-44
+	android:name
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /home/melker/.gradle/caches/transforms-4/32d6ab720d42088de8e4b7afa5b0f81d/transformed/profileinstaller-1.3.0/AndroidManifest.xml:35:13-76
+intent-filter#action:name:androidx.profileinstaller.action.INSTALL_PROFILE
+ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /home/melker/.gradle/caches/transforms-4/32d6ab720d42088de8e4b7afa5b0f81d/transformed/profileinstaller-1.3.0/AndroidManifest.xml:40:13-42:29
+action#androidx.profileinstaller.action.INSTALL_PROFILE
+ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /home/melker/.gradle/caches/transforms-4/32d6ab720d42088de8e4b7afa5b0f81d/transformed/profileinstaller-1.3.0/AndroidManifest.xml:41:17-91
+	android:name
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /home/melker/.gradle/caches/transforms-4/32d6ab720d42088de8e4b7afa5b0f81d/transformed/profileinstaller-1.3.0/AndroidManifest.xml:41:25-88
+intent-filter#action:name:androidx.profileinstaller.action.SKIP_FILE
+ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /home/melker/.gradle/caches/transforms-4/32d6ab720d42088de8e4b7afa5b0f81d/transformed/profileinstaller-1.3.0/AndroidManifest.xml:43:13-45:29
+action#androidx.profileinstaller.action.SKIP_FILE
+ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /home/melker/.gradle/caches/transforms-4/32d6ab720d42088de8e4b7afa5b0f81d/transformed/profileinstaller-1.3.0/AndroidManifest.xml:44:17-85
+	android:name
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /home/melker/.gradle/caches/transforms-4/32d6ab720d42088de8e4b7afa5b0f81d/transformed/profileinstaller-1.3.0/AndroidManifest.xml:44:25-82
+intent-filter#action:name:androidx.profileinstaller.action.SAVE_PROFILE
+ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /home/melker/.gradle/caches/transforms-4/32d6ab720d42088de8e4b7afa5b0f81d/transformed/profileinstaller-1.3.0/AndroidManifest.xml:46:13-48:29
+action#androidx.profileinstaller.action.SAVE_PROFILE
+ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /home/melker/.gradle/caches/transforms-4/32d6ab720d42088de8e4b7afa5b0f81d/transformed/profileinstaller-1.3.0/AndroidManifest.xml:47:17-88
+	android:name
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /home/melker/.gradle/caches/transforms-4/32d6ab720d42088de8e4b7afa5b0f81d/transformed/profileinstaller-1.3.0/AndroidManifest.xml:47:25-85
+intent-filter#action:name:androidx.profileinstaller.action.BENCHMARK_OPERATION
+ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /home/melker/.gradle/caches/transforms-4/32d6ab720d42088de8e4b7afa5b0f81d/transformed/profileinstaller-1.3.0/AndroidManifest.xml:49:13-51:29
+action#androidx.profileinstaller.action.BENCHMARK_OPERATION
+ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /home/melker/.gradle/caches/transforms-4/32d6ab720d42088de8e4b7afa5b0f81d/transformed/profileinstaller-1.3.0/AndroidManifest.xml:50:17-95
+	android:name
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.0] /home/melker/.gradle/caches/transforms-4/32d6ab720d42088de8e4b7afa5b0f81d/transformed/profileinstaller-1.3.0/AndroidManifest.xml:50:25-92
