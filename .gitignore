@@ -1,2 +1,43 @@
+# Dev SSH keys
 .githost_dev_key
 .githost_dev_key.pub
+
+# Go
+*.exe
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+vendor/
+
+# Android
+*.iml
+.gradle/
+/local.properties
+/.idea/
+/.idea/caches
+/.idea/libraries
+/.idea/modules.xml
+/.idea/workspace.xml
+/.idea/navEditor.xml
+/.idea/assetWizardSettings.xml
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+
+# Kotlin
+*.class
+*.kotlin_module
+
+# Misc
+*.log
+*.swp
+*.swo
+*~
+.vscode/
+.env
+.env.local
