@@ -2,6 +2,7 @@ package com.localgithub.githost.ssh
 
 import android.util.Log
 import com.localgithub.githost.whitelist.Whitelist
+import com.localgithub.githost.whitelist.WhitelistEntry
 import org.apache.sshd.common.NamedFactory
 import org.apache.sshd.common.cipher.BuiltinCiphers
 import org.apache.sshd.common.cipher.Cipher
@@ -82,16 +83,16 @@ class GitSshServer(
         srv.publickeyAuthenticator = PublickeyAuthenticator { _, key, session ->
             val entry = whitelist.authorize(key)
             if (entry != null) {
-                session.setAttribute(SESSION_LABEL_KEY, entry.label)
-                Log.i(TAG, "AUTH ok   key=${Whitelist.fingerprint(key)} label=${entry.label} addr=${session.clientAddress}")
+                session.setAttribute(SESSION_ENTRY_KEY, entry)
+                Log.i(TAG, "AUTH ok   key=${Whitelist.fingerprint(key)} label=${entry.label} type=${entry.type} addr=${session.clientAddress}")
             } else {
                 Log.w(TAG, "AUTH fail key=${Whitelist.fingerprint(key)} addr=${session.clientAddress}")
             }
             entry != null
         }
 
-        srv.commandFactory = CommandFactory { _, rawCommand ->
-            handleCommand(rawCommand.trim())
+        srv.commandFactory = CommandFactory { channel, rawCommand ->
+            handleCommand(rawCommand.trim(), channel.session.getAttribute(SESSION_ENTRY_KEY))
         }
 
         srv.start()
@@ -107,7 +108,9 @@ class GitSshServer(
 
     val isRunning: Boolean get() = server?.isStarted == true
 
-    private fun handleCommand(rawCommand: String): org.apache.sshd.server.command.Command {
+    private fun handleCommand(rawCommand: String, entry: WhitelistEntry?): org.apache.sshd.server.command.Command {
+        if (entry == null) return GitCommand.RejectCommand("not authenticated")
+
         val spaceIdx = rawCommand.indexOf(' ')
         if (spaceIdx < 0) return GitCommand.RejectCommand("invalid command: $rawCommand")
 
@@ -121,6 +124,19 @@ class GitSshServer(
         val repoPath = resolvePath(baseDir, repoArg)
             ?: return GitCommand.RejectCommand("invalid path: $repoArg")
 
+        val repoName = repoPath.name
+        val isWrite = cmd == "git-receive-pack"
+
+        if (!entry.repos.contains("*") && !entry.repos.contains(repoName)) {
+            Log.w(TAG, "DENY repo  label=${entry.label} repo=$repoName allowed=${entry.repos}")
+            return GitCommand.RejectCommand("access denied: repo not accessible")
+        }
+        if (isWrite && entry.perm == com.localgithub.githost.whitelist.Permission.RO) {
+            Log.w(TAG, "DENY write label=${entry.label} repo=$repoName (read-only)")
+            return GitCommand.RejectCommand("access denied: read-only access")
+        }
+
+        Log.i(TAG, "CMD ${cmd} repo=$repoName label=${entry.label}")
         return when (cmd) {
             "git-upload-pack"  -> GitCommand.UploadPackCommand(repoPath)
             "git-receive-pack" -> GitCommand.ReceivePackCommand(repoPath)
@@ -129,7 +145,7 @@ class GitSshServer(
     }
 
     companion object {
-        val SESSION_LABEL_KEY = org.apache.sshd.common.AttributeRepository.AttributeKey<String>()
+        val SESSION_ENTRY_KEY = org.apache.sshd.common.AttributeRepository.AttributeKey<WhitelistEntry>()
 
         /**
          * Strips leading slash, resolves against baseDir, guards against path traversal.

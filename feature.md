@@ -68,3 +68,74 @@ can be plumbed into MINA SSHD without re-enabling the BC registrar, enabling Ed2
 auth which is the modern default on most machines.
 
 ---
+
+
+## Some undeveloped ideas
+
+- The app should support sharing binary files between devices.
+- Mobile UI should be refined, two tabs the top allowing for switching between Code | Media
+  The Code tab shows stored git repos, the Media tab shows stored media files (like a gallary app).
+
+- Handle SSH key and handeling the setting of origin,
+  I want super low friction for setting up new devices this includes finding a slick way of managing the ssh keys and setting up the origin.
+  We should allow for configuration of the ssh key generation and the origin setting.
+  We do not want to force "our way" of handeling things like SSH keys onto users. 
+  
+  We need to consider the UX and DX for the experiance someone that installs this application for the first time goes through.
+  
+  User installs Mobile app:
+    Mobile should host and manage allowed devices.
+    We should offer like a setup guide.
+    The setup guid shall cover how it works and what's needed.
+    There is not a lot of setup needed on the mobile side, only the desktop needs to generate SSH and set up the origin etc
+    perhaps we could offer one-liner commands on mobile that the user can copy and run on their desktop to set up the SSH key and origin.
+    This can be done by having a button in the setup guide that allows for transfering the commands to the pc.
+
+  Desktop app:
+    Should also be avalible for hosting.
+    Say a user want to host on a old laptop or rasberry PI or PC.
+    We need to support this and this is what our go application does.
+    So it would be nice if we had like a setup guide for pc app.
+    Where we promt user do you want setup guide of manuall configuration?
+    followed with things like "generate new SSH key? (yes/no)", "set up origin? (yes/no)", etc.
+
+- The mobile should be able to manage "Friends" 
+  Differentiate between Devices and Friends.
+  Devices are only the users own devices.
+  Friends are other users that the user wants to share repos with.
+
+  The hosting device should be able to set permissions for each friend, allowing access to specific repos, read-only or read-write.
+  but also set an exiry date on the friends access.
+  So phone is able to see the list of added "Friend" devices and press e.g Bob's key is valid for a week.
+
+  We should also have notifications for when a Friend is pusing/pulling, or accessing hosting device in any other capacity.
+  
+  We need to also consider what if Friend is not on same network as hosting device.
+  We ideally should have a setting to allow for WAN connections.
+
+  "
+  Thinkign of the flow here: 
+  Say i have a repo called Test.
+  I'm activly working on it (hosted on my mobile).
+  I want to start colaborating with a friend.
+  How should this work?
+  Friend sends SSH public key?
+  Can we allow for a temporary TCP connection to a device over WAN?
+  That we use to transfer the SSH key through?
+  Can we allow for our PIN to be used even if the connection happens over WAN?
+
+  We might want a toggle in settings on host machince for WAN connections, set timeout for WAN connections etc.
+  "
+
+- We should also allow for multiple Friends to be added.
+
+- Friend is added, that firend shuold be able to list the repos that are accessible to them.
+- Allow Friends to commit an issue?
+  This might be a bit complex, but it would be nice to have.
+  Say user A wants to report an issue, 
+  they enter a command, issue is written to a md file and sent to the hosting device.
+  Hosting device can then view the issue and respond to it.
+  
+  This would mean we need to seperatly handle Issue files from code files.
+
+- 

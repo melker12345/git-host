@@ -217,6 +217,21 @@ private fun parseSshWireKey(wire: ByteArray): PublicKey {
                 RSAPublicKeySpec(BigInteger(1, nBytes), BigInteger(1, eBytes))
             )
         }
+        "ecdsa-sha2-nistp256" -> {
+            val _curve = ByteArray(buf.int); buf.get(_curve)   // skip "nistp256"
+            val point  = ByteArray(buf.int); buf.get(point)    // 04 || x (32) || y (32)
+            require(point.size == 65 && point[0] == 0x04.toByte()) {
+                "Expected uncompressed P-256 point (65 bytes), got ${point.size}"
+            }
+            val x = BigInteger(1, point.copyOfRange(1, 33))
+            val y = BigInteger(1, point.copyOfRange(33, 65))
+            val params = java.security.AlgorithmParameters.getInstance("EC")
+            params.init(java.security.spec.ECGenParameterSpec("secp256r1"))
+            val ecSpec = params.getParameterSpec(java.security.spec.ECParameterSpec::class.java)
+            KeyFactory.getInstance("EC").generatePublic(
+                java.security.spec.ECPublicKeySpec(java.security.spec.ECPoint(x, y), ecSpec)
+            )
+        }
         "ssh-ed25519" -> {
             val kBytes = ByteArray(buf.int); buf.get(kBytes)
             val spki = SubjectPublicKeyInfo(

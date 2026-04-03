@@ -1,7 +1,8 @@
 package com.localgithub.githost.ui
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
@@ -11,7 +12,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -19,6 +19,8 @@ import androidx.navigation.NavController
 import com.localgithub.githost.GitHostApp
 import com.localgithub.githost.pairing.formatPin
 import com.localgithub.githost.pairing.hostPair
+import com.localgithub.githost.whitelist.KeyType
+import com.localgithub.githost.whitelist.Permission
 import com.localgithub.githost.whitelist.Whitelist
 import kotlinx.coroutines.launch
 import java.security.PublicKey
@@ -38,8 +40,18 @@ fun PairScreen(navController: NavController) {
     var pendingKey by remember { mutableStateOf<PublicKey?>(null) }
     var label by remember { mutableStateOf("") }
     var errorMsg by remember { mutableStateOf("") }
+    var keyType by remember { mutableStateOf(KeyType.DEVICE) }
+    var permission by remember { mutableStateOf(Permission.RW) }
+    var selectedRepos by remember { mutableStateOf(setOf<String>()) }
 
     val port = context.getSharedPreferences("git_host_prefs", 0).getInt("port", 2222)
+    val availableRepos = remember {
+        app.reposDir.listFiles()
+            ?.filter { it.isDirectory && it.name.endsWith(".git") }
+            ?.map { it.name }
+            ?.sorted()
+            ?: emptyList()
+    }
 
     Scaffold(
         topBar = {
@@ -80,13 +92,31 @@ fun PairScreen(navController: NavController) {
                     fingerprint = fingerprint,
                     label = label,
                     onLabelChange = { label = it },
+                    keyType = keyType,
+                    onKeyTypeChange = { keyType = it; selectedRepos = setOf() },
+                    permission = permission,
+                    onPermissionChange = { permission = it },
+                    availableRepos = availableRepos,
+                    selectedRepos = selectedRepos,
+                    onRepoToggle = { repo ->
+                        selectedRepos = if (repo in selectedRepos)
+                            selectedRepos - repo else selectedRepos + repo
+                    },
                     onApprove = {
                         pendingKey?.let { key ->
-                            app.whitelist.add(key, label.ifBlank { "unknown" })
+                            val repos = if (keyType == KeyType.DEVICE || selectedRepos.isEmpty())
+                                setOf("*") else selectedRepos
+                            app.whitelist.add(
+                                key, label.ifBlank { "unknown" },
+                                type = keyType, repos = repos, perm = permission,
+                            )
                         }
                         state = PairState.DONE
                     },
-                    onDeny = { state = PairState.IDLE; pin = ""; label = "" }
+                    onDeny = {
+                        state = PairState.IDLE; pin = ""; label = ""
+                        keyType = KeyType.DEVICE; permission = Permission.RW; selectedRepos = setOf()
+                    }
                 )
 
                 PairState.DONE -> DonePanel { navController.popBackStack() }
@@ -148,33 +178,110 @@ private fun ApprovalPanel(
     fingerprint: String,
     label: String,
     onLabelChange: (String) -> Unit,
+    keyType: KeyType,
+    onKeyTypeChange: (KeyType) -> Unit,
+    permission: Permission,
+    onPermissionChange: (Permission) -> Unit,
+    availableRepos: List<String>,
+    selectedRepos: Set<String>,
+    onRepoToggle: (String) -> Unit,
     onApprove: () -> Unit,
     onDeny: () -> Unit,
 ) {
-    Spacer(Modifier.height(20.dp))
-    Text("Device wants to connect", style = MaterialTheme.typography.headlineSmall)
-    Spacer(Modifier.height(20.dp))
-    Card(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(16.dp)) {
-            Text("Key fingerprint", style = MaterialTheme.typography.labelMedium)
-            Spacer(Modifier.height(4.dp))
-            Text(fingerprint, fontFamily = FontFamily.Monospace,
-                style = MaterialTheme.typography.bodySmall)
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        Spacer(Modifier.height(4.dp))
+        Text("New connection request", style = MaterialTheme.typography.headlineSmall)
+
+        Card(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(16.dp)) {
+                Text("Key fingerprint", style = MaterialTheme.typography.labelMedium)
+                Spacer(Modifier.height(4.dp))
+                Text(fingerprint, fontFamily = FontFamily.Monospace,
+                    style = MaterialTheme.typography.bodySmall)
+            }
         }
-    }
-    Spacer(Modifier.height(20.dp))
-    OutlinedTextField(
-        value = label,
-        onValueChange = onLabelChange,
-        label = { Text("Label (e.g. \"Alice's laptop\")") },
-        singleLine = true,
-        modifier = Modifier.fillMaxWidth(),
-    )
-    Spacer(Modifier.height(24.dp))
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        OutlinedButton(onClick = onDeny, modifier = Modifier.weight(1f)) { Text("Deny") }
-        Button(onClick = onApprove, modifier = Modifier.weight(1f),
-            enabled = label.isNotBlank()) { Text("Approve") }
+
+        OutlinedTextField(
+            value = label,
+            onValueChange = onLabelChange,
+            label = { Text("Label (e.g. \"Alice's laptop\")") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+
+        Text("Access type", style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.primary)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FilterChip(
+                selected = keyType == KeyType.DEVICE,
+                onClick = { onKeyTypeChange(KeyType.DEVICE) },
+                label = { Text("My Device") },
+            )
+            FilterChip(
+                selected = keyType == KeyType.FRIEND,
+                onClick = { onKeyTypeChange(KeyType.FRIEND) },
+                label = { Text("Friend") },
+            )
+        }
+
+        if (keyType == KeyType.FRIEND) {
+            Text("Permissions", style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.primary)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilterChip(
+                    selected = permission == Permission.RW,
+                    onClick = { onPermissionChange(Permission.RW) },
+                    label = { Text("Read & Write") },
+                )
+                FilterChip(
+                    selected = permission == Permission.RO,
+                    onClick = { onPermissionChange(Permission.RO) },
+                    label = { Text("Read only") },
+                )
+            }
+
+            Text("Repository access", style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.primary)
+            if (availableRepos.isEmpty()) {
+                Text(
+                    "No repos yet — friend will have access to all future repos.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                )
+            } else {
+                Text(
+                    if (selectedRepos.isEmpty()) "All repos (no restriction)"
+                    else "${selectedRepos.size} repo(s) selected",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                )
+                availableRepos.forEach { repo ->
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Checkbox(
+                            checked = repo in selectedRepos,
+                            onCheckedChange = { onRepoToggle(repo) },
+                        )
+                        Text(repo, style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.weight(1f))
+                    }
+                }
+            }
+        }
+
+        Spacer(Modifier.height(4.dp))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            OutlinedButton(onClick = onDeny, modifier = Modifier.weight(1f)) { Text("Deny") }
+            Button(onClick = onApprove, modifier = Modifier.weight(1f),
+                enabled = label.isNotBlank()) { Text("Approve") }
+        }
     }
 }
 
