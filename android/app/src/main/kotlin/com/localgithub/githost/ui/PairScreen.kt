@@ -29,7 +29,7 @@ private enum class PairState { IDLE, WAITING, APPROVAL, DONE, ERROR }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PairScreen(navController: NavController) {
+fun PairScreen(navController: NavController, defaultType: String = "device") {
     val context = LocalContext.current
     val app = context.applicationContext as GitHostApp
     val scope = rememberCoroutineScope()
@@ -40,7 +40,7 @@ fun PairScreen(navController: NavController) {
     var pendingKey by remember { mutableStateOf<PublicKey?>(null) }
     var label by remember { mutableStateOf("") }
     var errorMsg by remember { mutableStateOf("") }
-    var keyType by remember { mutableStateOf(KeyType.DEVICE) }
+    var keyType by remember { mutableStateOf(if (defaultType == "friend") KeyType.FRIEND else KeyType.DEVICE) }
     var permission by remember { mutableStateOf(Permission.RW) }
     var selectedRepos by remember { mutableStateOf(setOf<String>()) }
 

@@ -3,7 +3,9 @@ package com.localgithub.githost
 import android.app.Application
 import com.localgithub.githost.whitelist.Whitelist
 import com.localgithub.githost.service.GitHostService
+import org.bouncycastle.jce.provider.BouncyCastleProvider
 import java.io.File
+import java.security.Security
 
 class GitHostApp : Application() {
 
@@ -20,11 +22,13 @@ class GitHostApp : Application() {
         // On Android the property is unset → ExceptionInInitializerError.
         System.setProperty("user.home", filesDir.absolutePath)
 
-        // BouncyCastle is on the classpath (used in Pairing.kt) so MINA SSHD's
-        // auto-detection would register it as the JCE provider and then fail on Android
-        // because BC's internal crypto checks don't pass (isECCSupported() → false, etc.).
-        // Disabling the registrar list forces MINA SSHD to use Android's standard JCE.
+        // Disable MINA SSHD's auto-registration of BC as the JCE provider (it breaks
+        // Android's native crypto), but manually insert BC at a low priority so that
+        // MINA SSHD's EdDSA signature factory can find it for Ed25519 key verification.
         System.setProperty("org.apache.sshd.security.registrars", "")
+        if (Security.getProvider("BC") == null) {
+            Security.addProvider(BouncyCastleProvider())
+        }
     }
 
     companion object {

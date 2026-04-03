@@ -3,7 +3,9 @@ package com.localgithub.githost.whitelist
 import android.util.Base64
 import android.util.Log
 import org.apache.sshd.common.util.buffer.ByteArrayBuffer
+import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo
 import java.io.File
+import java.nio.ByteBuffer
 import java.security.PublicKey
 import java.time.Instant
 
@@ -126,8 +128,20 @@ class Whitelist(private val file: File) {
     fun remove(fingerprint: String): Boolean {
         val entries = loadEntries()
         val filtered = entries.filter { e ->
-            e.publicKey?.let { fingerprint(it) } != fingerprint
+            val fp = e.publicKey?.let { fingerprint(it) } ?: return@filter true
+            fp != fingerprint
         }
+        if (filtered.size == entries.size) return false
+        file.writeText(
+            filtered.joinToString("\n") { entryToLine(it) } +
+                if (filtered.isNotEmpty()) "\n" else ""
+        )
+        return true
+    }
+
+    fun removeByRawKey(rawKey: String): Boolean {
+        val entries = loadEntries()
+        val filtered = entries.filter { it.rawKey != rawKey }
         if (filtered.size == entries.size) return false
         file.writeText(
             filtered.joinToString("\n") { entryToLine(it) } +
@@ -141,7 +155,30 @@ class Whitelist(private val file: File) {
             val buf = ByteArrayBuffer()
             buf.putPublicKey(key)
             Base64.encodeToString(buf.compactData, Base64.NO_WRAP)
+        }.recoverCatching {
+            // MINA SSHD cannot encode Ed25519 without EdDSA registrar; encode manually
+            Base64.encodeToString(manualPutPublicKey(key), Base64.NO_WRAP)
         }.getOrNull()
+
+        private fun manualPutPublicKey(key: PublicKey): ByteArray {
+            val alg = key.algorithm
+            val wireBytes = when {
+                alg.contains("ed25519", ignoreCase = true) ||
+                alg.contains("eddsa",   ignoreCase = true) -> {
+                    val rawKey = SubjectPublicKeyInfo.getInstance(key.encoded).publicKeyData.bytes
+                    buildSshWire("ssh-ed25519".toByteArray(Charsets.US_ASCII), rawKey)
+                }
+                else -> throw IllegalArgumentException("no manual encoder for key type: $alg")
+            }
+            return ByteBuffer.allocate(4 + wireBytes.size)
+                .putInt(wireBytes.size).put(wireBytes).array()
+        }
+
+        private fun buildSshWire(vararg fields: ByteArray): ByteArray {
+            val buf = ByteBuffer.allocate(fields.sumOf { 4 + it.size })
+            for (f in fields) { buf.putInt(f.size); buf.put(f) }
+            return buf.array()
+        }
 
         fun base64WireToPublicKey(raw: String): PublicKey? = runCatching {
             val bytes = Base64.decode(raw, Base64.NO_WRAP)

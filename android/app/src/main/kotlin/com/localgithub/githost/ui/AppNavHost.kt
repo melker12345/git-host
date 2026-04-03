@@ -11,10 +11,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 
 private val bottomNavItems = listOf(
     BottomNavItem("repos",   "Repos",   Icons.Default.FolderOpen),
@@ -58,7 +60,14 @@ fun AppNavHost() {
             composable("repos")   { ReposScreen() }
             composable("devices") { DevicesScreen(navController) }
             composable("settings"){ SettingsScreen() }
-            composable("pair")    { PairScreen(navController) }
+            composable(
+                "pair?defaultType={defaultType}",
+                arguments = listOf(navArgument("defaultType") {
+                    type = NavType.StringType; defaultValue = "device"
+                })
+            ) { back ->
+                PairScreen(navController, back.arguments?.getString("defaultType") ?: "device")
+            }
         }
     }
 }
