@@ -1,12 +1,8 @@
 package com.localgithub.githost.ui
 
-import android.app.ActivityManager
-import android.content.BroadcastReceiver
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -22,11 +18,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
-import androidx.localbroadcastmanager.content.LocalBroadcastManager
+import com.localgithub.githost.EventBus
 import com.localgithub.githost.GitHostApp
 import com.localgithub.githost.service.GitHostService
-import com.localgithub.githost.service.GitHostService.Companion.ACTION_SERVER_STOPPED
-import com.localgithub.githost.ssh.ACTION_GIT_EVENT
+import kotlinx.coroutines.launch
 import java.net.NetworkInterface
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -36,7 +31,7 @@ fun ReposScreen() {
     val app = context.applicationContext as GitHostApp
 
     val prefs = remember { context.getSharedPreferences("git_host_prefs", 0) }
-    var running by remember { mutableStateOf(isServiceRunning(context)) }
+    var running by remember { mutableStateOf(GitHostService.isRunning(context)) }
     var repos by remember { mutableStateOf(listOf<String>()) }
 
     fun refreshRepos() {
@@ -50,29 +45,23 @@ fun ReposScreen() {
     LaunchedEffect(Unit) {
         refreshRepos()
         val shouldRun = prefs.getBoolean("server_running", false)
-        if (shouldRun && !isServiceRunning(context)) {
+        if (shouldRun && !GitHostService.isRunning(context)) {
             GitHostService.start(context)
         }
-        running = isServiceRunning(context)
+        running = GitHostService.isRunning(context)
     }
 
     DisposableEffect(Unit) {
-        val gitEventReceiver = object : BroadcastReceiver() {
-            override fun onReceive(ctx: Context, intent: Intent) {
-                refreshRepos()
-            }
+        val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main)
+        val gitEventsJob = scope.launch {
+            EventBus.gitEvents.collect { refreshRepos() }
         }
-        val stoppedReceiver = object : BroadcastReceiver() {
-            override fun onReceive(ctx: Context, intent: Intent) {
-                running = false
-            }
+        val stoppedJob = scope.launch {
+            EventBus.serverStopped.collect { running = false }
         }
-        val lbm = LocalBroadcastManager.getInstance(context)
-        lbm.registerReceiver(gitEventReceiver, IntentFilter(ACTION_GIT_EVENT))
-        lbm.registerReceiver(stoppedReceiver, IntentFilter(ACTION_SERVER_STOPPED))
         onDispose {
-            lbm.unregisterReceiver(gitEventReceiver)
-            lbm.unregisterReceiver(stoppedReceiver)
+            gitEventsJob.cancel()
+            stoppedJob.cancel()
         }
     }
 
@@ -182,13 +171,6 @@ private fun RepoItem(name: String, ip: String, port: Int, context: Context) {
         modifier = Modifier.clickable { expanded = !expanded },
     )
     HorizontalDivider()
-}
-
-@Suppress("DEPRECATION")
-private fun isServiceRunning(context: Context): Boolean {
-    val am = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
-    return am.getRunningServices(Int.MAX_VALUE)
-        .any { it.service.className == "com.localgithub.githost.service.GitHostService" }
 }
 
 private fun getLocalIp(): String {

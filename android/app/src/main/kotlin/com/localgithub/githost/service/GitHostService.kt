@@ -6,10 +6,8 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
-import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.content.IntentFilter
 import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.Handler
@@ -17,20 +15,15 @@ import android.os.IBinder
 import android.os.Looper
 import android.util.Log
 import androidx.core.app.NotificationCompat
-import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import java.util.concurrent.atomic.AtomicInteger
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+import com.localgithub.githost.EventBus
 import com.localgithub.githost.MainActivity
 import com.localgithub.githost.R
 import com.localgithub.githost.mdns.MdnsAdvertiser
-import com.localgithub.githost.ssh.ACTION_GIT_EVENT
-import com.localgithub.githost.ssh.EXTRA_ADDED
-import com.localgithub.githost.ssh.EXTRA_BRANCH
-import com.localgithub.githost.ssh.EXTRA_BYTES
-import com.localgithub.githost.ssh.EXTRA_DELETED
-import com.localgithub.githost.ssh.EXTRA_DEVICE_LABEL
-import com.localgithub.githost.ssh.EXTRA_EVENT_TYPE
-import com.localgithub.githost.ssh.EXTRA_MODIFIED
-import com.localgithub.githost.ssh.EXTRA_REPO_NAME
 import com.localgithub.githost.ssh.GitSshServer
 import com.localgithub.githost.whitelist.Whitelist
 import java.io.File
@@ -50,34 +43,7 @@ class GitHostService : Service() {
     private val idleHandler = Handler(Looper.getMainLooper())
     private val idleRunnable = Runnable { onIdleTimeout() }
 
-    private val gitEventReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context, intent: Intent) {
-            val type  = intent.getStringExtra(EXTRA_EVENT_TYPE) ?: return
-            val repo  = intent.getStringExtra(EXTRA_REPO_NAME)  ?: return
-            val label = intent.getStringExtra(EXTRA_DEVICE_LABEL) ?: "unknown"
-            val repoDisplay = repo.removeSuffix(".git")
-            val msg = when (type) {
-                "push" -> {
-                    val branch   = intent.getStringExtra(EXTRA_BRANCH) ?: "unknown"
-                    val bytes    = intent.getLongExtra(EXTRA_BYTES, -1L)
-                    val added    = intent.getIntExtra(EXTRA_ADDED, 0)
-                    val modified = intent.getIntExtra(EXTRA_MODIFIED, 0)
-                    val deleted  = intent.getIntExtra(EXTRA_DELETED, 0)
-                    val sizeStr  = if (bytes >= 0) formatBytes(bytes) else "?"
-                    "$label → $repoDisplay/$branch  [$added, $modified, $deleted]  $sizeStr"
-                }
-                "pull" -> "$label cloned $repoDisplay"
-                else   -> "$label: $type on $repoDisplay"
-            }
-            Log.i(TAG, "GIT_EVENT received: $msg")
-            postEventNotification(msg)
-        }
-    }
-
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        LocalBroadcastManager.getInstance(this)
-            .registerReceiver(gitEventReceiver, IntentFilter(ACTION_GIT_EVENT))
-
         when (intent?.action) {
             ACTION_SESSION_OPEN -> {
                 activeSessions.incrementAndGet()
@@ -100,7 +66,7 @@ class GitHostService : Service() {
                 } else {
                     startForeground(NOTIF_ID, buildNotification(port))
                 }
-                Thread { startServer() }.start()
+                CoroutineScope(Dispatchers.IO + SupervisorJob()).launch { startServer() }
                 scheduleIdleTimeout()
             }
             ACTION_STOP -> {
@@ -143,6 +109,7 @@ class GitHostService : Service() {
             server.start()
             sshServer = server
             starting = false
+            prefs().edit().putBoolean(PREF_SERVICE_RUNNING, true).apply()
             Log.i(TAG, "SSH server started — port=$port baseDir=${baseDir.absolutePath}")
         } catch (e: java.net.BindException) {
             starting = false
@@ -167,6 +134,7 @@ class GitHostService : Service() {
         sshServer = null
         mdnsAdvertiser?.stop()
         mdnsAdvertiser = null
+        prefs().edit().putBoolean(PREF_SERVICE_RUNNING, false).apply()
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
         Log.i(TAG, "Service stopped")
@@ -174,7 +142,6 @@ class GitHostService : Service() {
 
     override fun onDestroy() {
         idleHandler.removeCallbacks(idleRunnable)
-        LocalBroadcastManager.getInstance(this).unregisterReceiver(gitEventReceiver)
         sshServer?.stop()
         sshServer = null
         mdnsAdvertiser?.stop()
@@ -204,8 +171,7 @@ class GitHostService : Service() {
         Log.i(TAG, "Idle timeout: stopping server")
         prefs().edit().putBoolean("server_running", false).apply()
         postEventNotification("SSH server stopped (idle timeout)")
-        LocalBroadcastManager.getInstance(this)
-            .sendBroadcast(Intent(ACTION_SERVER_STOPPED))
+        EventBus.emitServerStopped()
         stopServer()
     }
 
@@ -296,6 +262,12 @@ class GitHostService : Service() {
         const val PREF_PORT         = "port"
         const val PREF_BASE_DIR     = "base_dir"
         const val PREF_IDLE_TIMEOUT = "idle_timeout_minutes"
+        const val PREF_SERVICE_RUNNING = "service_running"
+
+        fun isRunning(context: Context): Boolean {
+            return context.getSharedPreferences("git_host_prefs", Context.MODE_PRIVATE)
+                .getBoolean(PREF_SERVICE_RUNNING, false)
+        }
 
         fun start(context: Context) {
             context.startForegroundService(

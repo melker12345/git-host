@@ -2,11 +2,13 @@ package com.localgithub.githost.ssh
 
 import android.content.Context
 import android.content.Intent
-import android.os.Handler
-import android.os.Looper
 import android.util.Log
-import androidx.localbroadcastmanager.content.LocalBroadcastManager
+import com.localgithub.githost.EventBus
 import com.localgithub.githost.service.GitHostService
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import org.apache.sshd.server.channel.ChannelSession
 import org.apache.sshd.server.command.Command
 import org.apache.sshd.server.ExitCallback
@@ -26,14 +28,6 @@ import java.io.InputStream
 import java.io.OutputStream
 
 const val ACTION_GIT_EVENT    = "com.localgithub.githost.GIT_EVENT"
-const val EXTRA_EVENT_TYPE    = "type"   // "push" or "pull"
-const val EXTRA_REPO_NAME     = "repo"
-const val EXTRA_DEVICE_LABEL  = "label"
-const val EXTRA_BRANCH        = "branch"
-const val EXTRA_BYTES         = "bytes"
-const val EXTRA_ADDED         = "added"
-const val EXTRA_MODIFIED      = "modified"
-const val EXTRA_DELETED       = "deleted"
 
 private const val TAG = "GitCommand"
 
@@ -69,7 +63,7 @@ sealed class GitCommand : Command {
     ) : GitCommand() {
         override fun start(channel: ChannelSession, env: org.apache.sshd.server.Environment) {
             signalSession(context, open = true)
-            Thread {
+            CoroutineScope(Dispatchers.IO + SupervisorJob()).launch {
                 try {
                     openRepo(repoPath)?.use { repo ->
                         Log.i(TAG, "FETCH repo=${repoPath.name} label=$deviceLabel")
@@ -89,7 +83,7 @@ sealed class GitCommand : Command {
                 } finally {
                     signalSession(context, open = false)
                 }
-            }.start()
+            }
         }
 
         override fun destroy(channel: ChannelSession) {}
@@ -104,7 +98,7 @@ sealed class GitCommand : Command {
     ) : GitCommand() {
         override fun start(channel: ChannelSession, env: org.apache.sshd.server.Environment) {
             signalSession(context, open = true)
-            Thread {
+            CoroutineScope(Dispatchers.IO + SupervisorJob()).launch {
                 // Captured inside receive block before repo is closed
                 var capturedBranch = "unknown"
                 var capturedOldId: ObjectId? = null
@@ -133,7 +127,7 @@ sealed class GitCommand : Command {
                     sendError(e.message ?: "internal error")
                     exit(1)
                     signalSession(context, open = false)
-                    return@Thread
+                    return@launch
                 }
                 // Metadata diff — separate repo handle, never affects git exit code
                 try {
@@ -151,7 +145,7 @@ sealed class GitCommand : Command {
                 } finally {
                     signalSession(context, open = false)
                 }
-            }.start()
+            }
         }
 
         override fun destroy(channel: ChannelSession) {}
@@ -177,14 +171,11 @@ private fun signalSession(context: Context, open: Boolean) {
 }
 
 private fun broadcastEvent(context: Context, type: String, repo: String, label: String) {
-    val intent = Intent(ACTION_GIT_EVENT).apply {
-        putExtra(EXTRA_EVENT_TYPE, type)
-        putExtra(EXTRA_REPO_NAME, repo)
-        putExtra(EXTRA_DEVICE_LABEL, label)
-    }
-    Handler(Looper.getMainLooper()).post {
-        LocalBroadcastManager.getInstance(context).sendBroadcast(intent)
-    }
+    EventBus.emitGitEvent(EventBus.GitEvent(
+        type = type,
+        repo = repo,
+        label = label
+    ))
 }
 
 private fun broadcastPush(
@@ -197,19 +188,16 @@ private fun broadcastPush(
     modified: Int,
     deleted: Int,
 ) {
-    val intent = Intent(ACTION_GIT_EVENT).apply {
-        putExtra(EXTRA_EVENT_TYPE, "push")
-        putExtra(EXTRA_REPO_NAME, repo)
-        putExtra(EXTRA_DEVICE_LABEL, label)
-        putExtra(EXTRA_BRANCH, branch)
-        putExtra(EXTRA_BYTES, bytes)
-        putExtra(EXTRA_ADDED, added)
-        putExtra(EXTRA_MODIFIED, modified)
-        putExtra(EXTRA_DELETED, deleted)
-    }
-    Handler(Looper.getMainLooper()).post {
-        LocalBroadcastManager.getInstance(context).sendBroadcast(intent)
-    }
+    EventBus.emitGitEvent(EventBus.GitEvent(
+        type = "push",
+        repo = repo,
+        label = label,
+        branch = branch,
+        bytes = bytes,
+        added = added,
+        modified = modified,
+        deleted = deleted
+    ))
 }
 
 private fun diffStats(repo: Repository, oldId: ObjectId, newId: ObjectId): Triple<Int, Int, Int> {
