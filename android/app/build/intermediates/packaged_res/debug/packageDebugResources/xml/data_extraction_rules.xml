@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<data-extraction-rules>
-    <cloud-backup>
-        <exclude domain="file" path="config/whitelist" />
-        <exclude domain="file" path="config/host_key" />
-    </cloud-backup>
-</data-extraction-rules>
