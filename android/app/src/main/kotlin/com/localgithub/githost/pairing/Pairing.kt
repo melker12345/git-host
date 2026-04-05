@@ -52,46 +52,94 @@ fun formatPin(pin: String): String =
 // --- Host side ---------------------------------------------------------------
 
 /**
+ * Holds the result of a completed pairing handshake.
+ * The TCP connection is kept open until [approve] or [deny] is called.
+ */
+class PairingRequest(
+    val publicKey: PublicKey,
+    private val socket: java.net.Socket,
+    private val output: java.io.OutputStream,
+) {
+    /** Send approval to the peer and close the connection. */
+    fun approve() {
+        try {
+            writeMsg(output, byteArrayOf(1))
+            Log.i(TAG, "Approve byte sent successfully")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to send approve byte", e)
+        } finally {
+            try { socket.close() } catch (_: Exception) {}
+        }
+    }
+
+    /** Send denial to the peer and close the connection. */
+    fun deny() {
+        try {
+            writeMsg(output, byteArrayOf(0))
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to send deny byte", e)
+        } finally {
+            try { socket.close() } catch (_: Exception) {}
+        }
+    }
+}
+
+/**
  * Runs the host (owner) side of the pairing protocol.
  *
  * Suspends until a device connects and completes the handshake.
  * [onPin] is called immediately with the 6-digit PIN so the caller can
  * display it before waiting.
  *
- * Returns the peer's [PublicKey] on success; the caller then prompts for
- * approval and writes to the whitelist.
+ * Returns a [PairingRequest] containing the peer's public key and
+ * approve/deny callbacks. The TCP connection stays open until one is called.
  */
 suspend fun hostPair(
     pairingPort: Int,
     onPin: (String) -> Unit,
-): PublicKey = withContext(Dispatchers.IO) {
+): PairingRequest = withContext(Dispatchers.IO) {
     val (hostPriv, hostPub) = generateX25519Keypair()
     onPin(pinFromPubkey(hostPub))
     Log.i(TAG, "Pairing session open on :$pairingPort")
 
-    ServerSocket(pairingPort).use { serverSocket ->
-        serverSocket.soTimeout = 5 * 60 * 1000
-        serverSocket.accept().use { conn ->
-            conn.soTimeout = 30_000
-            val input = conn.getInputStream()
-            val output = conn.getOutputStream()
-
-            val friendPub = readMsg(input)
-            require(friendPub.size == 32) { "invalid friend pubkey length: ${friendPub.size}" }
-
-            val sharedSecret = x25519(hostPriv, friendPub)
-            writeMsg(output, hostPub)
-
-            val sessionKey = deriveSessionKey(sharedSecret)
-
-            val encPayload = readMsg(input)
-            val pubkeyWire = aesgcmDecrypt(sessionKey, encPayload)
-
-            val pubkey = parseSshWireKey(pubkeyWire)
-            writeMsg(output, byteArrayOf(1))
-            pubkey
-        }
+    Log.i(TAG, "Opening ServerSocket on port $pairingPort")
+    val serverSocket = ServerSocket(pairingPort)
+    serverSocket.soTimeout = 5 * 60 * 1000
+    val conn = try {
+        Log.i(TAG, "Waiting for peer to connect...")
+        serverSocket.accept()
+    } finally {
+        serverSocket.close()
     }
+    Log.i(TAG, "Peer connected from ${conn.inetAddress}")
+
+    conn.soTimeout = 5 * 60 * 1000
+    val input = conn.getInputStream()
+    val output = conn.getOutputStream()
+
+    Log.d(TAG, "Step 1: reading peer ephemeral pubkey")
+    val friendPub = readMsg(input)
+    require(friendPub.size == 32) { "invalid friend pubkey length: ${friendPub.size}" }
+
+    Log.d(TAG, "Step 2: ECDH + send host pubkey")
+    val sharedSecret = x25519(hostPriv, friendPub)
+    writeMsg(output, hostPub)
+
+    Log.d(TAG, "Step 3: deriving session key")
+    val sessionKey = deriveSessionKey(sharedSecret)
+
+    Log.d(TAG, "Step 4: reading encrypted SSH pubkey")
+    val encPayload = readMsg(input)
+
+    Log.d(TAG, "Step 5: decrypting payload (${encPayload.size} bytes)")
+    val pubkeyWire = aesgcmDecrypt(sessionKey, encPayload)
+
+    Log.d(TAG, "Step 6: parsing SSH public key")
+    val pubkey = parseSshWireKey(pubkeyWire)
+    Log.i(TAG, "Handshake complete — key type=${pubkey.algorithm}, awaiting user decision")
+
+    // Connection stays open — caller must call PairingRequest.approve() or .deny()
+    PairingRequest(pubkey, conn, output)
 }
 
 // --- Friend side -------------------------------------------------------------

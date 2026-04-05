@@ -18,7 +18,7 @@ import (
 	gossh "golang.org/x/crypto/ssh"
 )
 
-const SessionTimeout = 30 * time.Second
+const SessionTimeout = 5 * time.Minute
 
 // PINFromPubkey derives the 6-digit pairing PIN from an X25519 public key.
 // PIN = SHA256(pub)[0:3] interpreted as big-endian uint24, mod 1_000_000.
@@ -125,9 +125,6 @@ func HostPair(ctx context.Context, pairingPort int, onPIN func(string)) (gossh.P
 		return nil, fmt.Errorf("parse received pubkey: %w", err)
 	}
 
-	// Step 6: signal approval (host will add the key after this returns)
-	_ = writeMsg(conn, []byte{1})
-
 	return pubkey, nil
 }
 
@@ -202,9 +199,13 @@ func FriendJoin(ctx context.Context, hostAddr, pin, pubkeyFile string, pairingPo
 		return fmt.Errorf("send encrypted pubkey: %w", err)
 	}
 
-	// Step 6: wait for approval signal
+	// Step 6: wait for approval signal (phone owner must tap Approve)
+	fmt.Println("Waiting for approval on the host device...")
 	resp, err := readMsg(conn)
-	if err != nil || len(resp) == 0 || resp[0] != 1 {
+	if err != nil {
+		return fmt.Errorf("waiting for approval: %w (did the PIN expire or was it denied?)", err)
+	}
+	if len(resp) == 0 || resp[0] != 1 {
 		return fmt.Errorf("request denied by host owner")
 	}
 

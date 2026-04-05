@@ -17,13 +17,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.localgithub.githost.GitHostApp
+import com.localgithub.githost.pairing.PairingRequest
 import com.localgithub.githost.pairing.formatPin
 import com.localgithub.githost.pairing.hostPair
+import android.util.Log
 import com.localgithub.githost.whitelist.KeyType
 import com.localgithub.githost.whitelist.Permission
 import com.localgithub.githost.whitelist.Whitelist
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import java.security.PublicKey
 
 private enum class PairState { IDLE, WAITING, APPROVAL, DONE, ERROR }
 
@@ -37,7 +39,7 @@ fun PairScreen(navController: NavController, defaultType: String = "device") {
     var state by remember { mutableStateOf(PairState.IDLE) }
     var pin by remember { mutableStateOf("") }
     var fingerprint by remember { mutableStateOf("") }
-    var pendingKey by remember { mutableStateOf<PublicKey?>(null) }
+    var pairingRequest by remember { mutableStateOf<PairingRequest?>(null) }
     var label by remember { mutableStateOf("") }
     var errorMsg by remember { mutableStateOf("") }
     var keyType by remember { mutableStateOf(if (defaultType == "friend") KeyType.FRIEND else KeyType.DEVICE) }
@@ -73,13 +75,16 @@ fun PairScreen(navController: NavController, defaultType: String = "device") {
                 PairState.IDLE -> IdlePanel {
                     state = PairState.WAITING
                     scope.launch {
+                        Log.i("PairScreen", "Launching hostPair on port ${port + 1}")
                         runCatching {
                             hostPair(port + 1, onPin = { p -> pin = p })
-                        }.onSuccess { key ->
-                            pendingKey = key
-                            fingerprint = Whitelist.fingerprint(key)
+                        }.onSuccess { req ->
+                            Log.i("PairScreen", "hostPair success — key=${Whitelist.fingerprint(req.publicKey)}")
+                            pairingRequest = req
+                            fingerprint = Whitelist.fingerprint(req.publicKey)
                             state = PairState.APPROVAL
                         }.onFailure { e ->
+                            Log.e("PairScreen", "hostPair FAILED: ${e.message}", e)
                             errorMsg = e.message ?: "Pairing failed"
                             state = PairState.ERROR
                         }
@@ -103,17 +108,30 @@ fun PairScreen(navController: NavController, defaultType: String = "device") {
                             selectedRepos - repo else selectedRepos + repo
                     },
                     onApprove = {
-                        pendingKey?.let { key ->
+                        val req = pairingRequest
+                        if (req != null) {
                             val repos = if (keyType == KeyType.DEVICE || selectedRepos.isEmpty())
                                 setOf("*") else selectedRepos
-                            app.whitelist.add(
-                                key, label.ifBlank { "unknown" },
-                                type = keyType, repos = repos, perm = permission,
-                            )
+                            runCatching {
+                                val fp = app.whitelist.add(
+                                    req.publicKey, label.ifBlank { "unknown" },
+                                    type = keyType, repos = repos, perm = permission,
+                                )
+                                Log.i("PairScreen", "Whitelist add ok fingerprint=$fp")
+                            }.onFailure { e ->
+                                Log.e("PairScreen", "Whitelist add FAILED", e)
+                            }
+                            scope.launch(Dispatchers.IO) {
+                                Log.i("PairScreen", "Sending approve to peer")
+                                req.approve()
+                                Log.i("PairScreen", "Approve sent")
+                            }
                         }
                         state = PairState.DONE
                     },
                     onDeny = {
+                        scope.launch(Dispatchers.IO) { pairingRequest?.deny() }
+                        pairingRequest = null
                         state = PairState.IDLE; pin = ""; label = ""
                         keyType = KeyType.DEVICE; permission = Permission.RW; selectedRepos = setOf()
                     }

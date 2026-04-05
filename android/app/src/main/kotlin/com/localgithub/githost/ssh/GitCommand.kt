@@ -1,17 +1,39 @@
 package com.localgithub.githost.ssh
 
+import android.content.Context
+import android.content.Intent
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
+import com.localgithub.githost.service.GitHostService
 import org.apache.sshd.server.channel.ChannelSession
 import org.apache.sshd.server.command.Command
 import org.apache.sshd.server.ExitCallback
 import org.apache.sshd.server.session.ServerSession
+import org.eclipse.jgit.diff.DiffEntry
+import org.eclipse.jgit.diff.DiffFormatter
+import org.eclipse.jgit.lib.ObjectId
 import org.eclipse.jgit.lib.Repository
+import org.eclipse.jgit.revwalk.RevWalk
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder
+import org.eclipse.jgit.transport.ReceiveCommand
 import org.eclipse.jgit.transport.ReceivePack
 import org.eclipse.jgit.transport.UploadPack
+import org.eclipse.jgit.util.io.DisabledOutputStream
 import java.io.File
 import java.io.InputStream
 import java.io.OutputStream
+
+const val ACTION_GIT_EVENT    = "com.localgithub.githost.GIT_EVENT"
+const val EXTRA_EVENT_TYPE    = "type"   // "push" or "pull"
+const val EXTRA_REPO_NAME     = "repo"
+const val EXTRA_DEVICE_LABEL  = "label"
+const val EXTRA_BRANCH        = "branch"
+const val EXTRA_BYTES         = "bytes"
+const val EXTRA_ADDED         = "added"
+const val EXTRA_MODIFIED      = "modified"
+const val EXTRA_DELETED       = "deleted"
 
 private const val TAG = "GitCommand"
 
@@ -40,15 +62,21 @@ sealed class GitCommand : Command {
 
     // -------------------------------------------------------------------------
 
-    class UploadPackCommand(private val repoPath: File) : GitCommand() {
+    class UploadPackCommand(
+        private val repoPath: File,
+        private val context: Context,
+        private val deviceLabel: String,
+    ) : GitCommand() {
         override fun start(channel: ChannelSession, env: org.apache.sshd.server.Environment) {
+            signalSession(context, open = true)
             Thread {
                 try {
                     openRepo(repoPath)?.use { repo ->
-                        Log.i(TAG, "FETCH repo=${repoPath.name}")
+                        Log.i(TAG, "FETCH repo=${repoPath.name} label=$deviceLabel")
                         val up = UploadPack(repo)
                         up.isBiDirectionalPipe = true
                         up.upload(_in!!, _out!!, _err)
+                        broadcastEvent(context, "pull", repoPath.name, deviceLabel)
                         exit(0)
                     } ?: run {
                         sendError("repository not found: ${repoPath.name}")
@@ -58,6 +86,8 @@ sealed class GitCommand : Command {
                     Log.e(TAG, "UploadPack error", e)
                     sendError(e.message ?: "internal error")
                     exit(1)
+                } finally {
+                    signalSession(context, open = false)
                 }
             }.start()
         }
@@ -67,21 +97,59 @@ sealed class GitCommand : Command {
 
     // -------------------------------------------------------------------------
 
-    class ReceivePackCommand(private val repoPath: File) : GitCommand() {
+    class ReceivePackCommand(
+        private val repoPath: File,
+        private val context: Context,
+        private val deviceLabel: String,
+    ) : GitCommand() {
         override fun start(channel: ChannelSession, env: org.apache.sshd.server.Environment) {
+            signalSession(context, open = true)
             Thread {
+                // Captured inside receive block before repo is closed
+                var capturedBranch = "unknown"
+                var capturedOldId: ObjectId? = null
+                var capturedNewId: ObjectId? = null
+                var capturedBytes = -1L
+
                 try {
                     val repo = ensureRepo(repoPath)
                     repo.use {
-                        Log.i(TAG, "PUSH  repo=${repoPath.name}")
+                        Log.i(TAG, "PUSH  repo=${repoPath.name} label=$deviceLabel")
                         val rp = ReceivePack(repo)
+                        rp.setAllowCreates(true)
+                        rp.setAllowNonFastForwards(true)
                         rp.receive(_in!!, _out!!, _err)
-                        exit(0)
+                        // Capture while repo is still open
+                        val cmd = rp.getAllCommands()
+                            .firstOrNull { it.result == ReceiveCommand.Result.OK }
+                        capturedBranch = cmd?.refName?.removePrefix("refs/heads/") ?: "unknown"
+                        capturedOldId  = cmd?.oldId
+                        capturedNewId  = cmd?.newId
+                        capturedBytes  = try { rp.packSize } catch (_: Exception) { -1L }
                     }
+                    exit(0)
                 } catch (e: Exception) {
                     Log.e(TAG, "ReceivePack error", e)
                     sendError(e.message ?: "internal error")
                     exit(1)
+                    signalSession(context, open = false)
+                    return@Thread
+                }
+                // Metadata diff — separate repo handle, never affects git exit code
+                try {
+                    val oldId = capturedOldId
+                    val newId = capturedNewId
+                    val (added, modified, deleted) = if (oldId != null && newId != null) {
+                        openRepo(repoPath)?.use { r -> diffStats(r, oldId, newId) }
+                            ?: Triple(0, 0, 0)
+                    } else Triple(0, 0, 0)
+                    Log.i(TAG, "PUSH  branch=$capturedBranch bytes=$capturedBytes +$added ~$modified -$deleted")
+                    broadcastPush(context, repoPath.name, deviceLabel, capturedBranch, capturedBytes, added, modified, deleted)
+                } catch (e: Exception) {
+                    Log.w(TAG, "Push metadata extraction failed (non-fatal)", e)
+                    broadcastPush(context, repoPath.name, deviceLabel, capturedBranch, capturedBytes, 0, 0, 0)
+                } finally {
+                    signalSession(context, open = false)
                 }
             }.start()
         }
@@ -102,6 +170,76 @@ sealed class GitCommand : Command {
 }
 
 // --- helpers -----------------------------------------------------------------
+
+private fun signalSession(context: Context, open: Boolean) {
+    val action = if (open) GitHostService.ACTION_SESSION_OPEN else GitHostService.ACTION_SESSION_CLOSE
+    context.startService(Intent(context, GitHostService::class.java).setAction(action))
+}
+
+private fun broadcastEvent(context: Context, type: String, repo: String, label: String) {
+    val intent = Intent(ACTION_GIT_EVENT).apply {
+        putExtra(EXTRA_EVENT_TYPE, type)
+        putExtra(EXTRA_REPO_NAME, repo)
+        putExtra(EXTRA_DEVICE_LABEL, label)
+    }
+    Handler(Looper.getMainLooper()).post {
+        LocalBroadcastManager.getInstance(context).sendBroadcast(intent)
+    }
+}
+
+private fun broadcastPush(
+    context: Context,
+    repo: String,
+    label: String,
+    branch: String,
+    bytes: Long,
+    added: Int,
+    modified: Int,
+    deleted: Int,
+) {
+    val intent = Intent(ACTION_GIT_EVENT).apply {
+        putExtra(EXTRA_EVENT_TYPE, "push")
+        putExtra(EXTRA_REPO_NAME, repo)
+        putExtra(EXTRA_DEVICE_LABEL, label)
+        putExtra(EXTRA_BRANCH, branch)
+        putExtra(EXTRA_BYTES, bytes)
+        putExtra(EXTRA_ADDED, added)
+        putExtra(EXTRA_MODIFIED, modified)
+        putExtra(EXTRA_DELETED, deleted)
+    }
+    Handler(Looper.getMainLooper()).post {
+        LocalBroadcastManager.getInstance(context).sendBroadcast(intent)
+    }
+}
+
+private fun diffStats(repo: Repository, oldId: ObjectId, newId: ObjectId): Triple<Int, Int, Int> {
+    return try {
+        RevWalk(repo).use { rw ->
+            val newCommit = rw.parseCommit(newId)
+            val oldTree = if (ObjectId.zeroId() == oldId) null
+                          else rw.parseCommit(oldId).tree
+            DiffFormatter(DisabledOutputStream.INSTANCE).use { df ->
+                df.setRepository(repo)
+                val entries = df.scan(oldTree, newCommit.tree)
+                var added = 0; var modified = 0; var deleted = 0
+                for (entry in entries) {
+                    when (entry.changeType) {
+                        DiffEntry.ChangeType.ADD    -> added++
+                        DiffEntry.ChangeType.MODIFY -> modified++
+                        DiffEntry.ChangeType.DELETE -> deleted++
+                        DiffEntry.ChangeType.RENAME -> modified++
+                        DiffEntry.ChangeType.COPY   -> added++
+                        else -> {}
+                    }
+                }
+                Triple(added, modified, deleted)
+            }
+        }
+    } catch (e: Exception) {
+        Log.w(TAG, "diffStats failed", e)
+        Triple(0, 0, 0)
+    }
+}
 
 private fun openRepo(path: File): Repository? {
     if (!path.exists()) return null

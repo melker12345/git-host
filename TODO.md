@@ -1,80 +1,69 @@
 # TODO — LocalGitHub
 
-## Current status (2026-04-03)
+## Current status (2026-04-04)
 
-**Pairing: WORKING ✅**  
-`git-host join <PIN> --host 192.168.1.154` succeeds, device shows in Devices screen.
+**Pairing protocol fix: DONE ✅**
+TCP connection now stays open until owner taps Approve/Deny. CLI waits for response before printing success.
 
-**SSH server: NOT YET TESTED — needs rebuild + install**  
-`git push` gives `Connection refused` on port 2222 because the server hasn't been started.
+**ReposScreen pairing button: REMOVED ✅**
+The stray "+ friend" button on the Repos tab is gone.
+
+**Entry management: DONE ✅**
+Tap any entry in Devices/Friends to open edit dialog (permissions, repos, remove).
+
+**BC provider registered: DONE ✅**
+BouncyCastle added as Security provider in GitHostApp — should enable Ed25519 SSH auth.
+
+**SSH config alias fix: DONE ✅**
+`git-host join` now uses raw IP as alias (always resolvable), auto-generates ECDSA key if none found.
 
 ---
 
-## Next session — what to do first
+## Next: install & test
 
-### 1. Rebuild & install the APK in Android Studio
-Three fixes were applied since the last working build that haven't been installed yet:
-
-| Fix | File |
-|-----|------|
-| `javax.management` stubs (10 Java stub files) | `app/src/main/java/javax/management/*.java` |
-| `parseSshWireKey` rewritten without MINA SSHD | `Pairing.kt` |
-| `startForeground()` now passes `FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE` | `GitHostService.kt` |
-
-In Android Studio: **Run ▶ or Build → Generate Signed/Debug APK**, then install via ADB or Android Studio directly.
-
-### 2. Start the SSH server on the phone
-- Open the app → **Repos** screen  
-- Tap the **⏻ (power) icon in the top-right corner** of the title bar  
-- A persistent notification "git-host running" should appear  
-- If a notification permission dialog pops up, allow it
-
-### 3. Test git push from laptop
+### 1. Install updated APK
 ```bash
-cd ~/Desktop/Test          # the test repo from last session
-export PHONE=192.168.1.154
-git push phone main        # remote was already added as ssh://git@$PHONE:2222/Test.git
-```
-Expected: repo `Test.git` created on the phone, push succeeds.
-
-### 4. Test git clone
-```bash
-cd /tmp
-git clone ssh://git@192.168.1.154:2222/Test.git clone-test
-ls clone-test/             # should show README.md
+JAVA_HOME=/usr/lib/jvm/java-17-openjdk ~/.gradle/wrapper/dists/gradle-8.6-bin/afr5mpiioh2wthjmwnkmdsd5w/gradle-8.6/bin/gradle assembleDebug
+adb install -r android/app/build/outputs/apk/debug/app-debug.apk
 ```
 
-### 5. Test git pull (round-trip)
+### 2. Fresh pair (clean state)
+- Phone: Devices → My Devices tab → tap **+** → PIN appears
+- Laptop:
 ```bash
-cd ~/Desktop/Test
-echo "update" >> README.md
-git add . && git commit -m "update"
-git push phone main
+/tmp/git-host join <PIN> --host 192.168.1.154
+```
+- **Wait** on laptop — CLI now blocks until you approve on phone
+- Approve on phone → CLI prints clone command
 
+### 3. Test clone
+```bash
+git clone ssh://192.168.1.154/Test.git /tmp/clone-test
+```
+
+### 4. Test push
+```bash
 cd /tmp/clone-test
-git pull                   # should get the new commit
+echo "test" >> README.md && git add . && git commit -m "test"
+git push
 ```
 
 ---
 
-## If the server still won't start after rebuild
+## Known remaining issues to investigate
 
-Check logcat for errors from the `GitHostService` and `SshServer` tags:
-```bash
-adb logcat -s GitHostService:D SshServer:D Pairing:D
-```
-
-Most likely culprits after the rebuild:
-- **`NoClassDefFoundError`** for any other missing class → add another stub
-- **`Exception` in `server.start()`** → SSH host key generation failure (BouncyCastle issue)
-- **`SecurityException`** → missing permission in manifest
+- [ ] Ed25519 auth — BC provider fix applied but not yet confirmed working; ECDSA preferred for now
+- [ ] Friend expiry UI — expiry date picker not yet on approval screen (currently no expiry = permanent)
+- [ ] WAN support — no NAT traversal yet; both device types LAN-only for now
+- [ ] Server running state not persisted across app restarts (toggle resets on reopen)
+- [ ] Repo list doesn't refresh after a push creates a new repo (requires manual restart or pull-to-refresh)
 
 ---
 
-## Remaining MVP work after SSH server is confirmed working
+## Remaining MVP work
 
-- [ ] `git clone` from phone to laptop (verify UploadPack path)
-- [ ] `git pull` after a second push (verify incremental sync)
-- [ ] Auto-start server on boot (add `RECEIVE_BOOT_COMPLETED` + BroadcastReceiver)
-- [ ] Persist server running state across app restarts (SharedPreferences flag + check in `ReposScreen`)
-- [ ] Show actual server running state in UI (poll `GitSshServer.isRunning` instead of local toggle)
+- [ ] Expiry date picker on Friend approval screen
+- [ ] Notifications on push/pull activity
+- [ ] Auto-start server on boot
+- [ ] Persist server running state in SharedPreferences
+- [ ] mDNS hostname in clone URLs (so IP changes don't break remotes)

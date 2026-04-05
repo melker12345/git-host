@@ -71,6 +71,10 @@ auth which is the modern default on most machines.
 
 
 ## Some undeveloped ideas
+- Hosting device should be able to delete repos.
+  This could also extend to "My Devices" not Friends being able to send commands to the hosting device like:
+  - List repos.
+  - Delete repo.
 
 - The app should support sharing binary files between devices.
 - Mobile UI should be refined, two tabs the top allowing for switching between Code | Media
@@ -139,3 +143,46 @@ auth which is the modern default on most machines.
   This would mean we need to seperatly handle Issue files from code files.
 
 - 
+
+
+---
+
+## Device vs Friend — Access Model Clarification
+
+**My Devices** (high trust):
+- The owner's own machines (laptop, desktop, tablet).
+- Access to **all repos** by default, no expiry unless manually set later.
+- Work on both LAN and WAN.
+
+**Friends** (limited trust):
+- External collaborators.
+- Must select **specific repos** at add-time — no wildcards by default.
+- **Expiry is required** at add-time (e.g. 7 days, 30 days, or explicit "permanent").
+- Read-only or Read & Write selectable per friend.
+- Work on both LAN and WAN — friend may or may not be on the same network.
+
+**LAN vs WAN:**
+- Both device types work on LAN and WAN — the distinction is trust level, not network topology.
+- Future: optional "LAN only" toggle in settings per entry or globally.
+
+---
+
+## Pairing Protocol — Approval Timing Bug (Fixed)
+
+**Problem:** CLI printed "✓ Paired successfully!" immediately after the key was transmitted,
+before the phone owner tapped Approve or Deny. The socket closed before the dialog resolved,
+so tapping Approve had no effect — the key was never saved to the whitelist.
+
+**Fix:** Keep TCP connection open after key exchange. Send approval byte (1) only after
+owner taps Approve, send 0 on Deny. CLI blocks on the response before printing success
+and writing SSH config.
+
+---
+
+## Low-Friction Onboarding Goals
+
+- Single command: `git-host join <PIN> --host <IP>` — auto-generates SSH key if none found,
+  sends it securely, writes SSH config, prints ready-to-use clone command.
+- Phone shows PIN → user runs command → CLI waits → owner approves → CLI prints clone command.
+- SSH config uses the raw IP as the Host alias (always resolvable, no DNS needed).
+- After pairing, `git clone ssh://<ip>/<repo>.git` works immediately.

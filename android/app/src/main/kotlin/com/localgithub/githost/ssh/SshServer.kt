@@ -1,5 +1,6 @@
 package com.localgithub.githost.ssh
 
+import android.content.Context
 import android.util.Log
 import com.localgithub.githost.whitelist.Whitelist
 import com.localgithub.githost.whitelist.WhitelistEntry
@@ -40,6 +41,7 @@ class GitSshServer(
     private val baseDir: File,
     private val whitelist: Whitelist,
     private val hostKeyFile: File,
+    private val context: Context,
 ) {
     private var server: SshServer? = null
 
@@ -69,9 +71,18 @@ class GitSshServer(
         @Suppress("UNCHECKED_CAST")
         srv.compressionFactories = NamedFactory.setUpBuiltinFactories(
             true, BuiltinCompressions.VALUES) as List<NamedFactory<Compression>>
+        // Explicitly list signature algorithms so rsa-sha2-256 and rsa-sha2-512 are
+        // advertised — OpenSSH 8.8+ refuses the legacy ssh-rsa (SHA1) algorithm.
         @Suppress("UNCHECKED_CAST")
-        srv.signatureFactories   = NamedFactory.setUpBuiltinFactories(
-            true, BuiltinSignatures.VALUES) as List<NamedFactory<Signature>>
+        srv.signatureFactories = listOf(
+            BuiltinSignatures.rsaSHA512,
+            BuiltinSignatures.rsaSHA256,
+            BuiltinSignatures.rsa,
+            BuiltinSignatures.nistp256,
+            BuiltinSignatures.nistp384,
+            BuiltinSignatures.nistp521,
+            BuiltinSignatures.ed25519,
+        ).map { it as NamedFactory<Signature> }
 
         srv.randomFactory       = SingletonRandomFactory(JceRandomFactory.INSTANCE)
         srv.channelFactories    = listOf(ChannelSessionFactory.INSTANCE)
@@ -79,6 +90,7 @@ class GitSshServer(
         srv.fileSystemFactory   = NoneFileSystemFactory.INSTANCE
 
         Log.d(TAG, "kex=${srv.keyExchangeFactories?.size} ciphers=${srv.cipherFactories?.size}")
+        Log.d(TAG, "sig-algs=${srv.signatureFactories?.map { it.name }}")
 
         srv.publickeyAuthenticator = PublickeyAuthenticator { _, key, session ->
             val entry = whitelist.authorize(key)
@@ -138,8 +150,8 @@ class GitSshServer(
 
         Log.i(TAG, "CMD ${cmd} repo=$repoName label=${entry.label}")
         return when (cmd) {
-            "git-upload-pack"  -> GitCommand.UploadPackCommand(repoPath)
-            "git-receive-pack" -> GitCommand.ReceivePackCommand(repoPath)
+            "git-upload-pack"  -> GitCommand.UploadPackCommand(repoPath, context, entry.label)
+            "git-receive-pack" -> GitCommand.ReceivePackCommand(repoPath, context, entry.label)
             else               -> GitCommand.RejectCommand("command not allowed: $cmd")
         }
     }

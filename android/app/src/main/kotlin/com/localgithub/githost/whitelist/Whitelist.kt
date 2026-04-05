@@ -154,7 +154,10 @@ class Whitelist(private val file: File) {
         fun publicKeyToBase64Wire(key: PublicKey): String? = runCatching {
             val buf = ByteArrayBuffer()
             buf.putPublicKey(key)
-            Base64.encodeToString(buf.compactData, Base64.NO_WRAP)
+            // putPublicKey writes [4-byte-len][wire-bytes]; skip the length prefix
+            val all = buf.compactData
+            val wireBytes = all.copyOfRange(4, all.size)
+            Base64.encodeToString(wireBytes, Base64.NO_WRAP)
         }.recoverCatching {
             // MINA SSHD cannot encode Ed25519 without EdDSA registrar; encode manually
             Base64.encodeToString(manualPutPublicKey(key), Base64.NO_WRAP)
@@ -188,7 +191,9 @@ class Whitelist(private val file: File) {
         fun fingerprint(key: PublicKey): String = runCatching {
             val buf = ByteArrayBuffer()
             buf.putPublicKey(key)
-            val wire = buf.compactData
+            // putPublicKey writes [4-byte-len][wire-bytes]; fingerprint only over wire-bytes
+            val all = buf.compactData
+            val wire = all.copyOfRange(4, all.size)
             val digest = java.security.MessageDigest.getInstance("SHA-256").digest(wire)
             "SHA256:" + Base64.encodeToString(digest, Base64.NO_WRAP or Base64.NO_PADDING)
         }.getOrDefault("(unknown)")

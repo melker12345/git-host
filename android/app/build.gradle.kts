@@ -95,6 +95,9 @@ dependencies {
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
 
+    // LocalBroadcastManager for in-process push/pull event signalling
+    implementation("androidx.localbroadcastmanager:localbroadcastmanager:1.1.0")
+
     // DataStore (whitelist + config persistence)
     implementation("androidx.datastore:datastore-preferences:1.0.0")
 }
