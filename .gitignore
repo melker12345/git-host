@@ -14,7 +14,7 @@ vendor/
 # Android
 *.iml
 .gradle/
-/local.properties
+/.gradle/
 /.idea/
 /.idea/caches
 /.idea/libraries
@@ -22,6 +22,9 @@ vendor/
 /.idea/workspace.xml
 /.idea/navEditor.xml
 /.idea/assetWizardSettings.xml
+android/.gradle/
+android/.idea/
+android/app/build/
 .DS_Store
 /build
 /captures
