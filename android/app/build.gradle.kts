@@ -57,6 +57,7 @@ dependencies {
     // Core Android
     implementation("androidx.core:core-ktx:1.12.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
+    implementation("androidx.lifecycle:lifecycle-process:2.7.0")
     implementation("androidx.lifecycle:lifecycle-service:2.7.0")
     implementation("androidx.activity:activity-compose:1.8.2")
 
@@ -94,9 +95,6 @@ dependencies {
 
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
-
-    // LocalBroadcastManager for in-process push/pull event signalling
-    implementation("androidx.localbroadcastmanager:localbroadcastmanager:1.1.0")
 
     // DataStore (whitelist + config persistence)
     implementation("androidx.datastore:datastore-preferences:1.0.0")

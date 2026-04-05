@@ -19,7 +19,6 @@ import org.eclipse.jgit.lib.ObjectId
 import org.eclipse.jgit.lib.Repository
 import org.eclipse.jgit.revwalk.RevWalk
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder
-import org.eclipse.jgit.transport.ReceiveCommand
 import org.eclipse.jgit.transport.ReceivePack
 import org.eclipse.jgit.transport.UploadPack
 import org.eclipse.jgit.util.io.DisabledOutputStream
@@ -70,7 +69,7 @@ sealed class GitCommand : Command {
                         val up = UploadPack(repo)
                         up.isBiDirectionalPipe = true
                         up.upload(_in!!, _out!!, _err)
-                        broadcastEvent(context, "pull", repoPath.name, deviceLabel)
+                        broadcastEvent("pull", repoPath.name, deviceLabel)
                         exit(0)
                     } ?: run {
                         sendError("repository not found: ${repoPath.name}")
@@ -109,17 +108,24 @@ sealed class GitCommand : Command {
                     val repo = ensureRepo(repoPath)
                     repo.use {
                         Log.i(TAG, "PUSH  repo=${repoPath.name} label=$deviceLabel")
+                        val refsBefore = snapshotBranchRefs(repo)
                         val rp = ReceivePack(repo)
+                        rp.isBiDirectionalPipe = true
                         rp.setAllowCreates(true)
                         rp.setAllowNonFastForwards(true)
                         rp.receive(_in!!, _out!!, _err)
-                        // Capture while repo is still open
-                        val cmd = rp.getAllCommands()
-                            .firstOrNull { it.result == ReceiveCommand.Result.OK }
-                        capturedBranch = cmd?.refName?.removePrefix("refs/heads/") ?: "unknown"
-                        capturedOldId  = cmd?.oldId
-                        capturedNewId  = cmd?.newId
-                        capturedBytes  = try { rp.packSize } catch (_: Exception) { -1L }
+                        try {
+                            capturedBytes = try { rp.packSize } catch (_: Exception) { -1L }
+                            val refsAfter = snapshotBranchRefs(repo)
+                            val updatedRef = findUpdatedBranchRef(refsBefore, refsAfter)
+                            updatedRef?.let { refName ->
+                                capturedBranch = refName.removePrefix("refs/heads/")
+                                capturedOldId = refsBefore[refName]
+                                capturedNewId = refsAfter[refName]
+                            }
+                        } catch (e: Exception) {
+                            Log.w(TAG, "Push command metadata unavailable (non-fatal)", e)
+                        }
                     }
                     exit(0)
                 } catch (e: Exception) {
@@ -138,10 +144,10 @@ sealed class GitCommand : Command {
                             ?: Triple(0, 0, 0)
                     } else Triple(0, 0, 0)
                     Log.i(TAG, "PUSH  branch=$capturedBranch bytes=$capturedBytes +$added ~$modified -$deleted")
-                    broadcastPush(context, repoPath.name, deviceLabel, capturedBranch, capturedBytes, added, modified, deleted)
+                    broadcastPush(repoPath.name, deviceLabel, capturedBranch, capturedBytes, added, modified, deleted)
                 } catch (e: Exception) {
                     Log.w(TAG, "Push metadata extraction failed (non-fatal)", e)
-                    broadcastPush(context, repoPath.name, deviceLabel, capturedBranch, capturedBytes, 0, 0, 0)
+                    broadcastPush(repoPath.name, deviceLabel, capturedBranch, capturedBytes, 0, 0, 0)
                 } finally {
                     signalSession(context, open = false)
                 }
@@ -170,7 +176,7 @@ private fun signalSession(context: Context, open: Boolean) {
     context.startService(Intent(context, GitHostService::class.java).setAction(action))
 }
 
-private fun broadcastEvent(context: Context, type: String, repo: String, label: String) {
+private fun broadcastEvent(type: String, repo: String, label: String) {
     EventBus.emitGitEvent(EventBus.GitEvent(
         type = type,
         repo = repo,
@@ -179,7 +185,6 @@ private fun broadcastEvent(context: Context, type: String, repo: String, label: 
 }
 
 private fun broadcastPush(
-    context: Context,
     repo: String,
     label: String,
     branch: String,
@@ -227,6 +232,24 @@ private fun diffStats(repo: Repository, oldId: ObjectId, newId: ObjectId): Tripl
         Log.w(TAG, "diffStats failed", e)
         Triple(0, 0, 0)
     }
+}
+
+private fun snapshotBranchRefs(repo: Repository): Map<String, ObjectId?> {
+    return repo.refDatabase
+        .getRefsByPrefix("refs/heads/")
+        .associate { ref -> ref.name to ref.objectId }
+}
+
+private fun findUpdatedBranchRef(
+    before: Map<String, ObjectId?>,
+    after: Map<String, ObjectId?>,
+): String? {
+    return after.keys
+        .sorted()
+        .firstOrNull { refName -> before[refName] != after[refName] }
+        ?: before.keys
+            .sorted()
+            .firstOrNull { refName -> before[refName] != after[refName] }
 }
 
 private fun openRepo(path: File): Repository? {

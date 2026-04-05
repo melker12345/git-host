@@ -1,6 +1,5 @@
 package com.localgithub.githost.service
 
-import android.app.ActivityManager
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -15,10 +14,15 @@ import android.os.IBinder
 import android.os.Looper
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.ProcessLifecycleOwner
 import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import com.localgithub.githost.EventBus
 import com.localgithub.githost.MainActivity
@@ -38,10 +42,21 @@ class GitHostService : Service() {
     private var sshServer: GitSshServer? = null
     private var mdnsAdvertiser: MdnsAdvertiser? = null
     @Volatile private var starting = false
+    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private var gitEventsJob: Job? = null
 
     private val activeSessions = AtomicInteger(0)
     private val idleHandler = Handler(Looper.getMainLooper())
     private val idleRunnable = Runnable { onIdleTimeout() }
+
+    override fun onCreate() {
+        super.onCreate()
+        gitEventsJob = serviceScope.launch {
+            EventBus.gitEvents.collectLatest { event ->
+                handleGitEvent(event)
+            }
+        }
+    }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
@@ -142,6 +157,9 @@ class GitHostService : Service() {
 
     override fun onDestroy() {
         idleHandler.removeCallbacks(idleRunnable)
+        gitEventsJob?.cancel()
+        gitEventsJob = null
+        serviceScope.cancel()
         sshServer?.stop()
         sshServer = null
         mdnsAdvertiser?.stop()
@@ -169,22 +187,34 @@ class GitHostService : Service() {
             return
         }
         Log.i(TAG, "Idle timeout: stopping server")
-        prefs().edit().putBoolean("server_running", false).apply()
+        prefs().edit().putBoolean(PREF_SERVICE_RUNNING, false).apply()
         postEventNotification("SSH server stopped (idle timeout)")
         EventBus.emitServerStopped()
         stopServer()
     }
 
     private fun isAppInForeground(): Boolean {
-        val am = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
-        val tasks = am.getRunningTasks(1)
-        return tasks.isNotEmpty() &&
-            tasks[0].topActivity?.packageName == packageName
+        return ProcessLifecycleOwner.get().lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     // -------------------------------------------------------------------------
+
+    private fun handleGitEvent(event: EventBus.GitEvent) {
+        val repoDisplay = event.repo.removeSuffix(".git")
+        val msg = when (event.type) {
+            "push" -> {
+                val branch = event.branch ?: "unknown"
+                val sizeStr = if (event.bytes >= 0) formatBytes(event.bytes) else "?"
+                "${event.label} → $repoDisplay/$branch  [${event.added}, ${event.modified}, ${event.deleted}]  $sizeStr"
+            }
+            "pull" -> "${event.label} cloned $repoDisplay"
+            else -> "${event.label}: ${event.type} on $repoDisplay"
+        }
+        Log.i(TAG, "GIT_EVENT received: $msg")
+        postEventNotification(msg)
+    }
 
     private fun buildNotification(port: Int): Notification {
         ensureChannel()
@@ -257,7 +287,6 @@ class GitHostService : Service() {
         const val ACTION_STOP           = "com.localgithub.githost.STOP"
         const val ACTION_SESSION_OPEN   = "com.localgithub.githost.SESSION_OPEN"
         const val ACTION_SESSION_CLOSE  = "com.localgithub.githost.SESSION_CLOSE"
-        const val ACTION_SERVER_STOPPED = "com.localgithub.githost.SERVER_STOPPED"
 
         const val PREF_PORT         = "port"
         const val PREF_BASE_DIR     = "base_dir"
