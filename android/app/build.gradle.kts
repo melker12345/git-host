@@ -88,7 +88,7 @@ dependencies {
     }
 
     // Apache MINA SSHD — embedded SSH server
-    implementation("org.apache.sshd:sshd-core:2.11.0") {
+    implementation("org.apache.sshd:sshd-core:2.12.1") {
         exclude(group = "org.slf4j", module = "slf4j-jdk14")
         exclude(group = "ch.qos.logback")
     }
