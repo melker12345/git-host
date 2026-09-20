@@ -31,6 +31,9 @@ type Config struct {
 	Port     int
 	Identity string
 	Mode     Mode
+	// KnownHosts is the file of pinned host keys ssh must check against.
+	// Set by the sync command, not read from the file.
+	KnownHosts string
 	// Dirs maps a prefix to a glob of repository directories. The prefix keeps
 	// same-named repos from different trees apart on the host.
 	Dirs []DirSpec

@@ -74,9 +74,14 @@ func runSync(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	host, err := resolveHost(cmd, &cfg)
+	trustNew, _ := cmd.Flags().GetBool("trust-new")
+	host, err := resolveHost(cmd, &cfg, trustNew)
 	if err != nil {
 		return err
+	}
+	cfg.KnownHosts, err = discovery.WriteKnownHosts(cfgDir)
+	if err != nil {
+		return fmt.Errorf("write known_hosts: %w", err)
 	}
 
 	// An unreachable host is an ordinary condition, not a failure: the server
@@ -136,23 +141,50 @@ func reportEmpty(cfg syncer.Config, cfgPath string) {
 	fmt.Printf("are one level deeper or shallower than the pattern, and edit [dirs].\n")
 }
 
-// resolveHost turns the configured host into an address to dial, discovering it
-// on the network when set to "auto". A discovered device also supplies the
-// port it advertises, unless --port was given explicitly.
-func resolveHost(cmd *cobra.Command, cfg *syncer.Config) (string, error) {
+// resolveHost turns the configured host into an address to dial, discovering
+// it on the network when set to "auto". A discovered device also supplies
+// the port it advertises, unless --port was given explicitly.
+//
+// Only a device whose SSH host key was pinned at pairing is accepted:
+// anything on the LAN can advertise the service, and a mirror push would
+// hand it every repository. --trust-new pins the key the host presents now.
+func resolveHost(cmd *cobra.Command, cfg *syncer.Config, trustNew bool) (string, error) {
+	var d discovery.Device
 	if cfg.Host != "" && cfg.Host != "auto" {
-		return cfg.Host, nil
+		var ok bool
+		if d, ok = discovery.Lookup(cfgDir, cfg.Host, cfg.Port); !ok {
+			d = discovery.Device{Name: cfg.Host, Host: cfg.Host, Port: cfg.Port}
+		}
+		d.Port = cfg.Port
+	} else {
+		var err error
+		d, err = discovery.Find(context.Background(), cfgDir, cfg.Device, 5*time.Second)
+		if err != nil {
+			return "", err
+		}
+		if d.Cached {
+			fmt.Printf("Discovery found nothing; using last known address for %s\n", d.Name)
+		}
+		if d.Port != 0 && !cmd.Flags().Changed("port") {
+			cfg.Port = d.Port
+		}
 	}
 
-	d, err := discovery.Find(context.Background(), cfgDir, cfg.Device, 5*time.Second)
-	if err != nil {
-		return "", err
-	}
-	if d.Cached {
-		fmt.Printf("Discovery found nothing; using last known address for %s\n", d.Name)
-	}
-	if d.Port != 0 && !cmd.Flags().Changed("port") {
-		cfg.Port = d.Port
+	if !d.Pinned() {
+		if !trustNew {
+			return "", fmt.Errorf("%s has no pinned SSH host key, so it cannot be trusted with a push\n"+
+				"  pair with it first:  git-host pair\n"+
+				"  or trust the key it presents right now:  git-host sync --trust-new", d.Name)
+		}
+		key, err := discovery.FetchHostKey(d.Addr(), d.Port, 5*time.Second)
+		if err != nil {
+			return "", fmt.Errorf("fetch host key from %s: %w", d.Name, err)
+		}
+		d.HostKey = discovery.MarshalHostKey(key)
+		if err := discovery.Pin(cfgDir, d); err != nil {
+			return "", err
+		}
+		fmt.Printf("Pinned host key for %s: %s\n", d.Name, d.HostKeyFingerprint())
 	}
 	return d.Addr(), nil
 }
@@ -173,5 +205,6 @@ func init() {
 	syncCmd.Flags().String("mode", "", "override the sync mode: mirror or additive")
 	syncCmd.Flags().String("only", "", "sync just the repository with this name")
 	syncCmd.Flags().Bool("dry-run", false, "list what would be pushed without pushing")
+	syncCmd.Flags().Bool("trust-new", false, "pin the SSH host key the host presents now (normally done by pair)")
 	rootCmd.AddCommand(syncCmd)
 }
