@@ -6,6 +6,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material3.*
+import com.localgithub.githost.ui.theme.GitHub
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -28,7 +29,7 @@ fun SettingsScreen() {
     val prefs = context.getSharedPreferences("git_host_prefs", Context.MODE_PRIVATE)
 
     var portText by remember {
-        mutableStateOf(prefs.getInt("port", 2222).toString())
+        mutableStateOf(prefs.getInt(GitHostService.PREF_PORT, GitHostService.DEFAULT_PORT).toString())
     }
     var portError by remember { mutableStateOf(false) }
 
@@ -38,7 +39,7 @@ fun SettingsScreen() {
     }
     var timeoutMenuExpanded by remember { mutableStateOf(false) }
 
-    Scaffold(topBar = { TopAppBar(title = { Text("Settings") }) }) { padding ->
+    Scaffold(topBar = { TopAppBar(title = { Text("Settings") }, colors = TopAppBarDefaults.topAppBarColors(containerColor = GitHub.CanvasSubtle)) }) { padding ->
         Column(
             Modifier.padding(padding).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -53,14 +54,14 @@ fun SettingsScreen() {
                     val p = v.toIntOrNull()
                     portError = p == null || p !in 1024..65535
                     if (!portError && p != null) {
-                        prefs.edit().putInt("port", p).apply()
+                        prefs.edit().putInt(GitHostService.PREF_PORT, p).apply()
                     }
                 },
                 label = { Text("SSH Port") },
                 isError = portError,
                 supportingText = {
                     if (portError) Text("Port must be 1024–65535")
-                    else Text("Default: 2222 (no root required)")
+                    else Text("Default: ${GitHostService.DEFAULT_PORT} (no root required)")
                 },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 singleLine = true,

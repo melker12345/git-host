@@ -139,8 +139,10 @@ sealed class GitCommand : Command {
                 try {
                     val oldId = capturedOldId
                     val newId = capturedNewId
-                    val (added, modified, deleted) = if (oldId != null && newId != null) {
-                        openRepo(repoPath)?.use { r -> diffStats(r, oldId, newId) }
+                    // A new branch has no old id; diff it against the empty tree
+                    // so the first push reports every file as added.
+                    val (added, modified, deleted) = if (newId != null) {
+                        openRepo(repoPath)?.use { r -> diffStats(r, oldId ?: ObjectId.zeroId(), newId) }
                             ?: Triple(0, 0, 0)
                     } else Triple(0, 0, 0)
                     Log.i(TAG, "PUSH  branch=$capturedBranch bytes=$capturedBytes +$added ~$modified -$deleted")

@@ -96,7 +96,7 @@ class GitSshServer(
             val entry = whitelist.authorize(key)
             if (entry != null) {
                 session.setAttribute(SESSION_ENTRY_KEY, entry)
-                Log.i(TAG, "AUTH ok   key=${Whitelist.fingerprint(key)} label=${entry.label} type=${entry.type} addr=${session.clientAddress}")
+                Log.i(TAG, "AUTH ok   key=${Whitelist.fingerprint(key)} label=${entry.label} addr=${session.clientAddress}")
             } else {
                 Log.w(TAG, "AUTH fail key=${Whitelist.fingerprint(key)} addr=${session.clientAddress}")
             }
@@ -137,16 +137,6 @@ class GitSshServer(
             ?: return GitCommand.RejectCommand("invalid path: $repoArg")
 
         val repoName = repoPath.name
-        val isWrite = cmd == "git-receive-pack"
-
-        if (!entry.repos.contains("*") && !entry.repos.contains(repoName)) {
-            Log.w(TAG, "DENY repo  label=${entry.label} repo=$repoName allowed=${entry.repos}")
-            return GitCommand.RejectCommand("access denied: repo not accessible")
-        }
-        if (isWrite && entry.perm == com.localgithub.githost.whitelist.Permission.RO) {
-            Log.w(TAG, "DENY write label=${entry.label} repo=$repoName (read-only)")
-            return GitCommand.RejectCommand("access denied: read-only access")
-        }
 
         Log.i(TAG, "CMD ${cmd} repo=$repoName label=${entry.label}")
         return when (cmd) {

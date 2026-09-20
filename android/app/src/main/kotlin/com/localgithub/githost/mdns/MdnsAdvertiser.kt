@@ -16,7 +16,9 @@ private const val SERVICE_TYPE = "_localgithub._tcp"
 class MdnsAdvertiser(context: Context) {
 
     private val nsdManager = context.getSystemService(Context.NSD_SERVICE) as NsdManager
-    private val deviceName = android.os.Build.MODEL.replace(" ", "-")
+    // Debug builds run next to the release app, so they advertise under another name.
+    private val deviceName = android.os.Build.MODEL.replace(" ", "-") +
+        if (com.localgithub.githost.BuildConfig.DEBUG) "-dev" else ""
 
     private var registrationListener: NsdManager.RegistrationListener? = null
 

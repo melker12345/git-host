@@ -6,17 +6,18 @@ import androidx.compose.material.icons.filled.Devices
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
+import com.localgithub.githost.ui.theme.GitHub
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import com.localgithub.githost.EventBus
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
-import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import androidx.navigation.navArgument
 
 private val bottomNavItems = listOf(
     BottomNavItem("repos",   "Repos",   Icons.Default.FolderOpen),
@@ -32,9 +33,18 @@ fun AppNavHost() {
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentDest = backStackEntry?.destination
 
+    // A githost://pair link opens the pair screen, which consumes the link.
+    LaunchedEffect(Unit) {
+        EventBus.pendingPairUri.collect { uri ->
+            if (uri != null && currentDest?.route != "pair") {
+                navController.navigate("pair") { launchSingleTop = true }
+            }
+        }
+    }
+
     Scaffold(
         bottomBar = {
-            NavigationBar {
+            NavigationBar(containerColor = GitHub.CanvasSubtle) {
                 bottomNavItems.forEach { item ->
                     NavigationBarItem(
                         selected = currentDest?.hierarchy?.any { it.route == item.route } == true,
@@ -47,6 +57,13 @@ fun AppNavHost() {
                         },
                         icon = { Icon(item.icon, contentDescription = item.label) },
                         label = { Text(item.label) },
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = GitHub.Fg,
+                            selectedTextColor = GitHub.Fg,
+                            indicatorColor = GitHub.BorderMuted,
+                            unselectedIconColor = GitHub.FgMuted,
+                            unselectedTextColor = GitHub.FgMuted,
+                        ),
                     )
                 }
             }
@@ -60,14 +77,7 @@ fun AppNavHost() {
             composable("repos")   { ReposScreen() }
             composable("devices") { DevicesScreen(navController) }
             composable("settings"){ SettingsScreen() }
-            composable(
-                "pair?defaultType={defaultType}",
-                arguments = listOf(navArgument("defaultType") {
-                    type = NavType.StringType; defaultValue = "device"
-                })
-            ) { back ->
-                PairScreen(navController, back.arguments?.getString("defaultType") ?: "device")
-            }
+            composable("pair")    { PairScreen(navController) }
         }
     }
 }

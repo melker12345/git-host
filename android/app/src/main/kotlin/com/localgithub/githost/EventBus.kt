@@ -1,6 +1,7 @@
 package com.localgithub.githost
 
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 
@@ -15,6 +16,9 @@ object EventBus {
 
     private val _serverStopped = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val serverStopped: SharedFlow<Unit> = _serverStopped.asSharedFlow()
+
+    /** A githost://pair link that arrived via an intent, waiting for the pair screen to consume it. */
+    val pendingPairUri = MutableStateFlow<String?>(null)
 
     fun emitGitEvent(event: GitEvent) {
         _gitEvents.tryEmit(event)

@@ -16,6 +16,13 @@ android {
     }
 
     buildTypes {
+        // Debug builds install side by side with the release app as "git-host2",
+        // so a development build never replaces the app that holds your repos.
+        debug {
+            applicationIdSuffix = ".dev"
+            versionNameSuffix = "-dev"
+            resValue("string", "app_name", "git-host2")
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
@@ -31,6 +38,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.8"
@@ -92,6 +100,9 @@ dependencies {
     // BouncyCastle — Ed25519 and X25519 crypto
     implementation("org.bouncycastle:bcprov-jdk15on:1.70")
     implementation("org.bouncycastle:bcpkix-jdk15on:1.70")
+
+    // QR scanning for "Add device -> Scan QR code"
+    implementation("com.journeyapps:zxing-android-embedded:4.3.0")
 
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")

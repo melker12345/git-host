@@ -74,7 +74,7 @@ class GitHostService : Service() {
                 return START_STICKY
             }
             ACTION_START -> {
-                val port = prefs().getInt(PREF_PORT, 2222)
+                val port = prefs().getInt(PREF_PORT, DEFAULT_PORT)
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                     startForeground(NOTIF_ID, buildNotification(port),
                         ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE)
@@ -101,7 +101,7 @@ class GitHostService : Service() {
         // ~/.ssh/authorized_keys.  On Android the property is unset → crash.
         System.setProperty("user.home", filesDir.absolutePath)
 
-        val port    = prefs().getInt(PREF_PORT, 2222)
+        val port    = prefs().getInt(PREF_PORT, DEFAULT_PORT)
         val baseDir = File(prefs().getString(PREF_BASE_DIR, null)
             ?: File(filesDir, "repos").absolutePath)
         val cfgDir  = File(filesDir, "config")
@@ -213,7 +213,24 @@ class GitHostService : Service() {
             else -> "${event.label}: ${event.type} on $repoDisplay"
         }
         Log.i(TAG, "GIT_EVENT received: $msg")
+        if (event.type == "push") recordLastPush(event)
         postEventNotification(msg)
+    }
+
+    /** Remembered per repository so the repo list can show who pushed what, and when. */
+    private fun recordLastPush(event: EventBus.GitEvent) {
+        val k = "last_push_${event.repo}_"
+        prefs().edit()
+            .putString(k + "label", event.label)
+            // A push that updates no refs has no branch; keep the last known one.
+            .putString(k + "branch", event.branch?.takeIf { it != "unknown" }
+                ?: prefs().getString(k + "branch", null))
+            .putLong(k + "bytes", event.bytes)
+            .putInt(k + "added", event.added)
+            .putInt(k + "modified", event.modified)
+            .putInt(k + "deleted", event.deleted)
+            .putLong(k + "time", System.currentTimeMillis())
+            .apply()
     }
 
     private fun buildNotification(port: Int): Notification {
@@ -289,6 +306,9 @@ class GitHostService : Service() {
         const val ACTION_SESSION_CLOSE  = "com.localgithub.githost.SESSION_CLOSE"
 
         const val PREF_PORT         = "port"
+
+        /** Debug builds install side by side with the release app, so they take another port. */
+        val DEFAULT_PORT: Int = if (com.localgithub.githost.BuildConfig.DEBUG) 2322 else 2222
         const val PREF_BASE_DIR     = "base_dir"
         const val PREF_IDLE_TIMEOUT = "idle_timeout_minutes"
         const val PREF_SERVICE_RUNNING = "service_running"
