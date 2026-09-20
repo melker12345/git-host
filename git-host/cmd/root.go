@@ -17,6 +17,9 @@ var rootCmd = &cobra.Command{
 	Use:   "git-host",
 	Short: "LocalGitHub — self-hosted git server over SSH",
 	Long:  "git-host turns your device into a private git hosting endpoint accessible over SSH on your local network.",
+	// Errors from RunE are real failures, not usage mistakes; don't bury them
+	// under the flag listing.
+	SilenceUsage: true,
 }
 
 func Execute() error {

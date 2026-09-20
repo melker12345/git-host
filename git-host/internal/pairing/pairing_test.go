@@ -2,8 +2,8 @@ package pairing_test
 
 import (
 	"context"
-	"fmt"
 	"net"
+	"strings"
 	"testing"
 	"time"
 
@@ -22,53 +22,74 @@ func findFreePort(t *testing.T) int {
 	return port
 }
 
-func TestPairingRoundtrip(t *testing.T) {
-	pairingPort := findFreePort(t)
-
-	// Host side
-	var gotPIN string
-	hostErrCh := make(chan error, 1)
-	hostPubkeyCh := make(chan string, 1)
-
+// startHost runs HostPair in the background and returns the PIN it published
+// plus a channel carrying the resulting request.
+func startHost(t *testing.T, port int) (pin <-chan string, result <-chan hostResult) {
+	t.Helper()
+	pinCh := make(chan string, 1)
+	resCh := make(chan hostResult, 1)
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
+		req, err := pairing.HostPair(ctx, port, func(p string) { pinCh <- p })
+		resCh <- hostResult{req: req, err: err}
+	}()
+	return pinCh, resCh
+}
 
-		pubkey, err := pairing.HostPair(ctx, pairingPort, func(pin string) {
-			gotPIN = pin
-		})
-		if err != nil {
-			hostErrCh <- err
+type hostResult struct {
+	req *pairing.Request
+	err error
+}
+
+func TestPairingRoundtripApproved(t *testing.T) {
+	port := findFreePort(t)
+	pinCh, resCh := startHost(t, port)
+
+	pin := <-pinCh
+	t.Logf("PIN: %s", pairing.FormatPIN(pin))
+
+	// The host must approve before FriendJoin can return, so drive it from a
+	// goroutine while the join is still in flight.
+	go func() {
+		res := <-resCh
+		if res.err != nil {
 			return
 		}
-		hostPubkeyCh <- fmt.Sprintf("%T", pubkey)
-		hostErrCh <- nil
+		_ = res.req.Approve()
 	}()
 
-	// Wait for host to start listening
-	time.Sleep(100 * time.Millisecond)
-
-	if gotPIN == "" {
-		t.Fatal("PIN was not generated")
+	err := pairing.FriendJoin(context.Background(), "127.0.0.1",
+		"testdata/id_ed25519.pub", port, pairing.MatchPIN(pin))
+	if err != nil {
+		t.Fatalf("FriendJoin failed: %v", err)
 	}
-	t.Logf("PIN: %s (%s)", pairing.FormatPIN(gotPIN), gotPIN)
+}
 
-	// Friend side
-	ctx := context.Background()
-	joinErr := pairing.FriendJoin(ctx, "127.0.0.1", gotPIN, "testdata/id_ed25519.pub", pairingPort)
+func TestPairingDenied(t *testing.T) {
+	port := findFreePort(t)
+	pinCh, resCh := startHost(t, port)
+	pin := <-pinCh
 
-	if joinErr != nil {
-		t.Fatalf("FriendJoin failed: %v", joinErr)
+	go func() {
+		res := <-resCh
+		if res.err != nil {
+			return
+		}
+		_ = res.req.Deny()
+	}()
+
+	err := pairing.FriendJoin(context.Background(), "127.0.0.1",
+		"testdata/id_ed25519.pub", port, pairing.MatchPIN(pin))
+	if err == nil {
+		t.Fatal("expected denial to be reported, got nil")
 	}
-
-	if err := <-hostErrCh; err != nil {
-		t.Fatalf("HostPair failed: %v", err)
+	if !strings.Contains(err.Error(), "denied") {
+		t.Errorf("expected a denial error, got: %v", err)
 	}
-	t.Logf("HostPair returned pubkey type: %s", <-hostPubkeyCh)
 }
 
 func TestPINDerivation(t *testing.T) {
-	// PIN must be exactly 6 digits
 	testPub := make([]byte, 32)
 	for i := range testPub {
 		testPub[i] = byte(i)
@@ -77,27 +98,50 @@ func TestPINDerivation(t *testing.T) {
 	if len(pin) != 6 {
 		t.Errorf("expected 6-digit PIN, got %q (len=%d)", pin, len(pin))
 	}
-	t.Logf("PIN for test key: %s", pairing.FormatPIN(pin))
+	// Derivation must be stable: the host and the client compute it separately
+	// and compare, so any drift breaks pairing entirely.
+	if again := pairing.PINFromPubkey(testPub); again != pin {
+		t.Errorf("PIN derivation is not deterministic: %q then %q", pin, again)
+	}
 }
 
 func TestMITMDetection(t *testing.T) {
-	pairingPort := findFreePort(t)
+	port := findFreePort(t)
+	pinCh, _ := startHost(t, port)
+	<-pinCh
 
-	hostErrCh := make(chan error, 1)
-	go func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		_, err := pairing.HostPair(ctx, pairingPort, func(pin string) {})
-		hostErrCh <- err
-	}()
-
-	time.Sleep(100 * time.Millisecond)
-
-	// Friend connects with WRONG PIN — should fail
-	ctx := context.Background()
-	err := pairing.FriendJoin(ctx, "127.0.0.1", "000000", "testdata/id_ed25519.pub", pairingPort)
+	// A wrong PIN means the key on the wire is not the host's — abort.
+	err := pairing.FriendJoin(context.Background(), "127.0.0.1",
+		"testdata/id_ed25519.pub", port, pairing.MatchPIN("000000"))
 	if err == nil {
 		t.Fatal("expected PIN mismatch error, got nil")
 	}
 	t.Logf("correctly rejected wrong PIN: %v", err)
 }
+
+// TestConfirmAbortSendsNothing checks that refusing at the confirm step stops
+// before the key is transmitted.
+func TestConfirmAbortSendsNothing(t *testing.T) {
+	port := findFreePort(t)
+	pinCh, resCh := startHost(t, port)
+	<-pinCh
+
+	err := pairing.FriendJoin(context.Background(), "127.0.0.1",
+		"testdata/id_ed25519.pub", port, func(string) error {
+			return errAborted
+		})
+	if err != errAborted {
+		t.Fatalf("expected the confirm error to propagate, got: %v", err)
+	}
+
+	res := <-resCh
+	if res.err == nil {
+		t.Error("host should not have completed a handshake after the client aborted")
+	}
+}
+
+var errAborted = &abortErr{}
+
+type abortErr struct{}
+
+func (*abortErr) Error() string { return "aborted by user" }

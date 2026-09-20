@@ -12,24 +12,13 @@ import (
 	gossh "golang.org/x/crypto/ssh"
 )
 
-type KeyType string
-type Permission string
-
-const (
-	KeyTypeDevice KeyType    = "device"
-	KeyTypeFriend KeyType    = "friend"
-	PermRW        Permission = "rw"
-	PermRO        Permission = "ro"
-)
-
+// Entry is one authorized device. Every device has full read and write
+// access to every repository; the only restriction is an optional expiry.
 type Entry struct {
 	PublicKey gossh.PublicKey
 	RawKey    string
 	Label     string
 	Expiry    int64
-	Type      KeyType
-	Repos     []string
-	Perm      Permission
 }
 
 type Whitelist struct {
@@ -40,6 +29,13 @@ func Load(path string) (*Whitelist, error) {
 	return &Whitelist{path: path}, nil
 }
 
+// File format, one entry per line:
+//
+//	<base64-ssh-wire-pubkey> <label> [expiry-unix-timestamp]
+//
+// Any further tokens on a line are ignored, so files written by older builds
+// (type=, repos=, perm=) still load. The Android app reads and writes the
+// same format.
 func (w *Whitelist) entries() ([]Entry, error) {
 	f, err := os.Open(w.path)
 	if os.IsNotExist(err) {
@@ -85,72 +81,30 @@ func parseLine(line string) (Entry, error) {
 		return Entry{}, fmt.Errorf("bad public key: %w", err)
 	}
 
-	e := Entry{
-		PublicKey: pubkey,
-		RawKey:    rawKey,
-		Label:     parts[1],
-		Type:      KeyTypeDevice,
-		Repos:     []string{"*"},
-		Perm:      PermRW,
-	}
-
-	idx := 2
-	if idx < len(parts) {
-		if ts, err := strconv.ParseInt(parts[idx], 10, 64); err == nil {
+	e := Entry{PublicKey: pubkey, RawKey: rawKey, Label: parts[1]}
+	if len(parts) > 2 {
+		if ts, err := strconv.ParseInt(parts[2], 10, 64); err == nil {
 			e.Expiry = ts
-			idx++
-		}
-	}
-	for ; idx < len(parts); idx++ {
-		token := parts[idx]
-		switch {
-		case strings.HasPrefix(token, "type="):
-			if strings.TrimPrefix(token, "type=") == "friend" {
-				e.Type = KeyTypeFriend
-			}
-		case strings.HasPrefix(token, "repos="):
-			e.Repos = strings.Split(strings.TrimPrefix(token, "repos="), ",")
-		case strings.HasPrefix(token, "perm="):
-			if strings.TrimPrefix(token, "perm=") == "ro" {
-				e.Perm = PermRO
-			}
 		}
 	}
 	return e, nil
 }
 
 func entryToLine(e Entry) string {
-	var sb strings.Builder
-	sb.WriteString(e.RawKey)
-	sb.WriteString(" ")
-	sb.WriteString(e.Label)
-
-	isDefaultType  := e.Type == KeyTypeDevice || e.Type == ""
-	isDefaultRepos := len(e.Repos) == 1 && e.Repos[0] == "*"
-	isDefaultPerm  := e.Perm == PermRW || e.Perm == ""
-	hasExtended := !isDefaultType || !isDefaultRepos || !isDefaultPerm
-
-	if e.Expiry != 0 || hasExtended {
-		if e.Expiry != 0 {
-			sb.WriteString(fmt.Sprintf(" %d", e.Expiry))
-		} else {
-			sb.WriteString(" 0")
-		}
+	if e.Expiry != 0 {
+		return fmt.Sprintf("%s %s %d", e.RawKey, e.Label, e.Expiry)
 	}
-	if hasExtended {
-		t := e.Type
-		if t == "" {
-			t = KeyTypeDevice
-		}
-		sb.WriteString(fmt.Sprintf(" type=%s", t))
-		if !isDefaultRepos {
-			sb.WriteString(fmt.Sprintf(" repos=%s", strings.Join(e.Repos, ",")))
-		}
-		if !isDefaultPerm {
-			sb.WriteString(" perm=ro")
-		}
+	return e.RawKey + " " + e.Label
+}
+
+// SanitizeLabel makes a label safe to store: it is one whitespace-delimited
+// token in the file, so spaces would be read back as an expiry or dropped.
+func SanitizeLabel(label string) string {
+	label = strings.Join(strings.Fields(label), "-")
+	if label == "" {
+		return "unknown"
 	}
-	return sb.String()
+	return label
 }
 
 func (w *Whitelist) Authorize(key gossh.PublicKey) (Entry, bool) {
@@ -174,8 +128,11 @@ func (w *Whitelist) Authorize(key gossh.PublicKey) (Entry, bool) {
 func (w *Whitelist) AddKey(pubkey gossh.PublicKey, label string, expiry int64) (string, error) {
 	rawKey := base64.StdEncoding.EncodeToString(pubkey.Marshal())
 	fp := gossh.FingerprintSHA256(pubkey)
-	e := Entry{RawKey: rawKey, Label: label, Expiry: expiry,
-		Type: KeyTypeDevice, Repos: []string{"*"}, Perm: PermRW}
+	e := Entry{RawKey: rawKey, Label: SanitizeLabel(label), Expiry: expiry}
+	// Re-adding the same key replaces its entry instead of stacking duplicates.
+	if err := w.Remove(fp); err == nil {
+		fmt.Fprintf(os.Stderr, "replaced existing entry for %s\n", fp)
+	}
 	line := entryToLine(e) + "\n"
 	f, err := os.OpenFile(w.path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
 	if err != nil {

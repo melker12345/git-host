@@ -36,15 +36,35 @@ func FormatPIN(pin string) string {
 	return pin
 }
 
+// Request is a completed pairing handshake awaiting the owner's decision.
+//
+// The underlying TCP connection stays open so the peer can be told the outcome.
+// Exactly one of Approve or Deny must be called, which closes the connection.
+type Request struct {
+	PublicKey gossh.PublicKey
+	conn      net.Conn
+}
+
+// Approve tells the peer the key was accepted, then closes the connection.
+func (r *Request) Approve() error { return r.respond(1) }
+
+// Deny tells the peer the key was rejected, then closes the connection.
+func (r *Request) Deny() error { return r.respond(0) }
+
+func (r *Request) respond(status byte) error {
+	defer r.conn.Close()
+	return writeMsg(r.conn, []byte{status})
+}
+
 // HostPair runs the owner side of the pairing protocol.
 //
 // onPIN is called immediately with the 6-digit PIN so the caller can display
 // it before blocking to wait for a connection.
 //
-// Returns the peer's SSH public key once a device connects and completes the
-// handshake. The caller is responsible for prompting the owner for approval
-// and writing the key to the whitelist.
-func HostPair(ctx context.Context, pairingPort int, onPIN func(string)) (gossh.PublicKey, error) {
+// Returns once a device connects and completes the handshake. The caller must
+// prompt the owner and then call Approve or Deny on the returned Request —
+// until it does, the peer is still waiting on the open connection.
+func HostPair(ctx context.Context, pairingPort int, onPIN func(string)) (*Request, error) {
 	hostPriv := make([]byte, 32)
 	if _, err := rand.Read(hostPriv); err != nil {
 		return nil, fmt.Errorf("generate keypair: %w", err)
@@ -54,13 +74,15 @@ func HostPair(ctx context.Context, pairingPort int, onPIN func(string)) (gossh.P
 		return nil, fmt.Errorf("derive public key: %w", err)
 	}
 
-	onPIN(PINFromPubkey(hostPub))
-
+	// Listen before publishing the PIN: once the owner can see the code they
+	// may act on it immediately, and the port must already accept connections.
 	ln, err := net.Listen("tcp", fmt.Sprintf(":%d", pairingPort))
 	if err != nil {
 		return nil, fmt.Errorf("listen on :%d: %w", pairingPort, err)
 	}
 	defer ln.Close()
+
+	onPIN(PINFromPubkey(hostPub))
 
 	connCh := make(chan net.Conn, 1)
 	acceptErrCh := make(chan error, 1)
@@ -81,7 +103,15 @@ func HostPair(ctx context.Context, pairingPort int, onPIN func(string)) (gossh.P
 	case <-ctx.Done():
 		return nil, fmt.Errorf("pairing session expired")
 	}
-	defer conn.Close()
+
+	// From here the connection is handed to the caller via Request, so it is
+	// only closed on an error path.
+	ok := false
+	defer func() {
+		if !ok {
+			conn.Close()
+		}
+	}()
 	conn.SetDeadline(time.Now().Add(SessionTimeout)) //nolint:errcheck
 
 	// Step 1: receive friend's ephemeral X25519 pubkey
@@ -125,14 +155,33 @@ func HostPair(ctx context.Context, pairingPort int, onPIN func(string)) (gossh.P
 		return nil, fmt.Errorf("parse received pubkey: %w", err)
 	}
 
-	return pubkey, nil
+	ok = true
+	return &Request{PublicKey: pubkey, conn: conn}, nil
+}
+
+// MatchPIN returns a confirm function for FriendJoin that checks the derived
+// PIN against one the user typed in.
+func MatchPIN(typed string) func(string) error {
+	return func(derived string) error {
+		if derived != typed {
+			return fmt.Errorf("PIN mismatch — possible MITM attack\n  entered:  %s\n  received: %s",
+				FormatPIN(typed), FormatPIN(derived))
+		}
+		return nil
+	}
 }
 
 // FriendJoin runs the friend side of the pairing protocol.
 //
-// Connects to the host at hostAddr:pairingPort, verifies the PIN, and sends
-// the SSH public key from pubkeyFile over the ECDH-secured channel.
-func FriendJoin(ctx context.Context, hostAddr, pin, pubkeyFile string, pairingPort int) error {
+// Connects to the host at hostAddr:pairingPort and sends the SSH public key
+// from pubkeyFile over the ECDH-secured channel.
+//
+// confirm is called with the 6-digit PIN derived from the host's ephemeral
+// key before anything is sent. Returning an error aborts the pairing — this
+// is the MITM check, and the caller decides how to make it: compare the PIN
+// against one the owner typed (see MatchPIN), or show it for visual
+// comparison against the host's screen.
+func FriendJoin(ctx context.Context, hostAddr, pubkeyFile string, pairingPort int, confirm func(pin string) error) error {
 	data, err := os.ReadFile(pubkeyFile)
 	if err != nil {
 		return fmt.Errorf("read pubkey file %s: %w", pubkeyFile, err)
@@ -173,11 +222,11 @@ func FriendJoin(ctx context.Context, hostAddr, pin, pubkeyFile string, pairingPo
 		return fmt.Errorf("invalid host pubkey length: %d", len(hostPub))
 	}
 
-	// Step 3: MITM check — verify the PIN matches the host's public key
-	expectedPIN := PINFromPubkey(hostPub)
-	if expectedPIN != pin {
-		return fmt.Errorf("PIN mismatch — possible MITM attack\n  entered:  %s\n  received: %s",
-			FormatPIN(pin), FormatPIN(expectedPIN))
+	// Step 3: MITM check — the caller verifies the PIN derived from the host's
+	// ephemeral key. An attacker cannot produce a key matching the PIN shown
+	// on the host's screen.
+	if err := confirm(PINFromPubkey(hostPub)); err != nil {
+		return err
 	}
 
 	// Step 4: ECDH + session key
@@ -199,8 +248,7 @@ func FriendJoin(ctx context.Context, hostAddr, pin, pubkeyFile string, pairingPo
 		return fmt.Errorf("send encrypted pubkey: %w", err)
 	}
 
-	// Step 6: wait for approval signal (phone owner must tap Approve)
-	fmt.Println("Waiting for approval on the host device...")
+	// Step 6: wait for approval signal (the owner must tap Approve)
 	resp, err := readMsg(conn)
 	if err != nil {
 		return fmt.Errorf("waiting for approval: %w (did the PIN expire or was it denied?)", err)
