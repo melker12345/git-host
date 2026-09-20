@@ -161,6 +161,21 @@ sealed class GitCommand : Command {
 
     // -------------------------------------------------------------------------
 
+    /** Answers `git-host-ls`: the bare repositories under baseDir, one per line. */
+    class ListReposCommand(private val baseDir: File) : GitCommand() {
+        override fun start(channel: ChannelSession, env: org.apache.sshd.server.Environment) {
+            val names = baseDir.listFiles()
+                ?.filter { it.isDirectory && it.name.endsWith(".git") }
+                ?.map { it.name }?.sorted() ?: emptyList()
+            _out?.write(names.joinToString("") { it + "\n" }.toByteArray())
+            exit(0)
+        }
+
+        override fun destroy(channel: ChannelSession) {}
+    }
+
+    // -------------------------------------------------------------------------
+
     class RejectCommand(private val reason: String) : GitCommand() {
         override fun start(channel: ChannelSession, env: org.apache.sshd.server.Environment) {
             sendError(reason)

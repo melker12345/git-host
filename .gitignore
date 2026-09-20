@@ -44,3 +44,4 @@ local.properties
 .vscode/
 .env
 .env.local
+android/keystore.properties

@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/gliderlabs/ssh"
+	"github.com/melker/git-host/internal/syncer"
 	"github.com/melker/git-host/internal/whitelist"
 	gossh "golang.org/x/crypto/ssh"
 )
@@ -53,6 +54,14 @@ func Run(ctx context.Context, cfg Config) error {
 			}
 
 			parts := s.Command()
+			if len(parts) == 1 && parts[0] == syncer.ListCommand {
+				log.Printf("LIST  label=%q", label)
+				for _, name := range listRepos(cfg.BaseDir) {
+					fmt.Fprintln(s, name)
+				}
+				s.Exit(0)
+				return
+			}
 			if len(parts) < 2 {
 				io.WriteString(s.Stderr(), "git-host: invalid command\n")
 				s.Exit(1)
@@ -157,4 +166,19 @@ func ensureRepo(path string) error {
 	// Ignore errors — older git may not support symbolic-ref this way.
 	_ = exec.Command("git", "-C", path, "symbolic-ref", "HEAD", "refs/heads/main").Run()
 	return nil
+}
+
+// listRepos names the bare repositories directly under baseDir.
+func listRepos(baseDir string) []string {
+	entries, err := os.ReadDir(baseDir)
+	if err != nil {
+		return nil
+	}
+	var names []string
+	for _, e := range entries {
+		if e.IsDir() && strings.HasSuffix(e.Name(), ".git") {
+			names = append(names, e.Name())
+		}
+	}
+	return names
 }

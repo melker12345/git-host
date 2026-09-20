@@ -123,6 +123,11 @@ class GitSshServer(
     private fun handleCommand(rawCommand: String, entry: WhitelistEntry?): org.apache.sshd.server.command.Command {
         if (entry == null) return GitCommand.RejectCommand("not authenticated")
 
+        if (rawCommand == LIST_COMMAND) {
+            Log.i(TAG, "LIST label=${entry.label}")
+            return GitCommand.ListReposCommand(baseDir)
+        }
+
         val spaceIdx = rawCommand.indexOf(' ')
         if (spaceIdx < 0) return GitCommand.RejectCommand("invalid command: $rawCommand")
 
@@ -147,6 +152,9 @@ class GitSshServer(
     }
 
     companion object {
+        /** The one non-git command accepted: prints the repositories held, one per line. */
+        const val LIST_COMMAND = "git-host-ls"
+
         val SESSION_ENTRY_KEY = org.apache.sshd.common.AttributeRepository.AttributeKey<WhitelistEntry>()
 
         /**
