@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"time"
 
@@ -11,6 +10,8 @@ import (
 	gossh "golang.org/x/crypto/ssh"
 )
 
+// keysCmd manages the whitelist that git-host serve authorizes against. It has
+// no effect on the Android app, which keeps its own list.
 var keysCmd = &cobra.Command{
 	Use:   "keys",
 	Short: "Manage authorized public keys",
@@ -50,7 +51,7 @@ var keysListCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		wlPath := filepath.Join(cfgDir, "whitelist")
 		wl, err := whitelist.Load(wlPath)
-		if err != nil && !os.IsNotExist(err) {
+		if err != nil {
 			return err
 		}
 
@@ -101,7 +102,7 @@ var keysRemoveCmd = &cobra.Command{
 }
 
 func init() {
-	keysAddCmd.Flags().String("label", "", "label for this key, no spaces (required)")
+	keysAddCmd.Flags().String("label", "", "label for this key; spaces become dashes (required)")
 	_ = keysAddCmd.MarkFlagRequired("label")
 	keysAddCmd.Flags().Int("expires-days", 0, "days until expiry (0 = permanent)")
 

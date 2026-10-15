@@ -12,24 +12,26 @@ import kotlinx.coroutines.launch
 import org.apache.sshd.server.channel.ChannelSession
 import org.apache.sshd.server.command.Command
 import org.apache.sshd.server.ExitCallback
-import org.apache.sshd.server.session.ServerSession
-import org.eclipse.jgit.diff.DiffEntry
-import org.eclipse.jgit.diff.DiffFormatter
-import org.eclipse.jgit.lib.ObjectId
 import org.eclipse.jgit.lib.Repository
-import org.eclipse.jgit.revwalk.RevWalk
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder
 import org.eclipse.jgit.transport.ReceivePack
 import org.eclipse.jgit.transport.UploadPack
-import org.eclipse.jgit.util.io.DisabledOutputStream
 import java.io.File
 import java.io.InputStream
 import java.io.OutputStream
 
-const val ACTION_GIT_EVENT    = "com.localgithub.githost.GIT_EVENT"
-
 private const val TAG = "GitCommand"
 
+/**
+ * The SSH exec commands the server runs, one instance per channel. MINA SSHD
+ * hands each command its streams and an exit callback before calling
+ * [Command.start]; the subclasses do the work and report an exit status.
+ *
+ * Git commands run on their own IO coroutine because [Command.start] must
+ * return promptly; the session stays open until [exit] is called. They also
+ * tell [GitHostService] when a session opens and closes so the idle timeout
+ * never stops the server in the middle of a transfer.
+ */
 sealed class GitCommand : Command {
 
     protected var _in: InputStream? = null
@@ -42,12 +44,14 @@ sealed class GitCommand : Command {
     override fun setErrorStream(err: OutputStream) { _err = err }
     override fun setExitCallback(callback: ExitCallback) { _cb = callback }
 
+    /** Flushes both output streams and reports [code] as the exit status, closing the channel. */
     protected fun exit(code: Int) {
         _out?.flush()
         _err?.flush()
         _cb?.onExit(code)
     }
 
+    /** Writes [msg] to stderr, which the git client prints as `git-host: <msg>`. */
     protected fun sendError(msg: String) {
         _err?.write("git-host: $msg\n".toByteArray())
         _err?.flush()
@@ -55,6 +59,7 @@ sealed class GitCommand : Command {
 
     // -------------------------------------------------------------------------
 
+    /** Serves `git fetch` / `git clone`. A missing repository is an error, never created. */
     class UploadPackCommand(
         private val repoPath: File,
         private val context: Context,
@@ -69,7 +74,7 @@ sealed class GitCommand : Command {
                         val up = UploadPack(repo)
                         up.isBiDirectionalPipe = true
                         up.upload(_in!!, _out!!, _err)
-                        broadcastEvent("pull", repoPath.name, deviceLabel)
+                        broadcastEvent(EventBus.GitEvent.PULL, repoPath.name, deviceLabel)
                         exit(0)
                     } ?: run {
                         sendError("repository not found: ${repoPath.name}")
@@ -90,6 +95,14 @@ sealed class GitCommand : Command {
 
     // -------------------------------------------------------------------------
 
+    /**
+     * Serves `git push`. Repositories are created on first push, and
+     * non-fast-forward updates and deletions are allowed, because a mirror
+     * sync makes the host an exact copy of the client.
+     *
+     * A [PushSummary] of the applied ref updates is emitted afterwards. Pushes
+     * that change nothing (most pushes of a sync) emit nothing.
+     */
     class ReceivePackCommand(
         private val repoPath: File,
         private val context: Context,
@@ -98,60 +111,46 @@ sealed class GitCommand : Command {
         override fun start(channel: ChannelSession, env: org.apache.sshd.server.Environment) {
             signalSession(context, open = true)
             CoroutineScope(Dispatchers.IO + SupervisorJob()).launch {
-                // Captured inside receive block before repo is closed
-                var capturedBranch = "unknown"
-                var capturedOldId: ObjectId? = null
-                var capturedNewId: ObjectId? = null
-                var capturedBytes = -1L
-
+                var summary: PushSummary? = null
+                var packBytes = -1L
                 try {
-                    val repo = ensureRepo(repoPath)
-                    repo.use {
+                    ensureRepo(repoPath).use { repo ->
                         Log.i(TAG, "PUSH  repo=${repoPath.name} label=$deviceLabel")
-                        val refsBefore = snapshotBranchRefs(repo)
                         val rp = ReceivePack(repo)
                         rp.isBiDirectionalPipe = true
                         rp.setAllowCreates(true)
                         rp.setAllowNonFastForwards(true)
-                        rp.receive(_in!!, _out!!, _err)
-                        try {
-                            capturedBytes = try { rp.packSize } catch (_: Exception) { -1L }
-                            val refsAfter = snapshotBranchRefs(repo)
-                            val updatedRef = findUpdatedBranchRef(refsBefore, refsAfter)
-                            updatedRef?.let { refName ->
-                                capturedBranch = refName.removePrefix("refs/heads/")
-                                capturedOldId = refsBefore[refName]
-                                capturedNewId = refsAfter[refName]
+                        // Runs after the refs are updated and before the client
+                        // is told the result. A failure here must never fail
+                        // the push itself, so it is only logged.
+                        rp.setPostReceiveHook { pack, commands ->
+                            try {
+                                summary = PushSummary.of(repo, commands)
+                                packBytes = runCatching { pack.packSize }.getOrDefault(-1L)
+                            } catch (e: Exception) {
+                                Log.w(TAG, "Push summary failed (non-fatal)", e)
                             }
-                        } catch (e: Exception) {
-                            Log.w(TAG, "Push command metadata unavailable (non-fatal)", e)
                         }
+                        rp.receive(_in!!, _out!!, _err)
                     }
                     exit(0)
                 } catch (e: Exception) {
                     Log.e(TAG, "ReceivePack error", e)
                     sendError(e.message ?: "internal error")
                     exit(1)
-                    signalSession(context, open = false)
-                    return@launch
-                }
-                // Metadata diff — separate repo handle, never affects git exit code
-                try {
-                    val oldId = capturedOldId
-                    val newId = capturedNewId
-                    // A new branch has no old id; diff it against the empty tree
-                    // so the first push reports every file as added.
-                    val (added, modified, deleted) = if (newId != null) {
-                        openRepo(repoPath)?.use { r -> diffStats(r, oldId ?: ObjectId.zeroId(), newId) }
-                            ?: Triple(0, 0, 0)
-                    } else Triple(0, 0, 0)
-                    Log.i(TAG, "PUSH  branch=$capturedBranch bytes=$capturedBytes +$added ~$modified -$deleted")
-                    broadcastPush(repoPath.name, deviceLabel, capturedBranch, capturedBytes, added, modified, deleted)
-                } catch (e: Exception) {
-                    Log.w(TAG, "Push metadata extraction failed (non-fatal)", e)
-                    broadcastPush(repoPath.name, deviceLabel, capturedBranch, capturedBytes, 0, 0, 0)
                 } finally {
                     signalSession(context, open = false)
+                }
+
+                summary?.takeUnless { it.isEmpty }?.let { s ->
+                    Log.i(TAG, "PUSH  repo=${repoPath.name} branches=${s.branches} commits=${s.commits} bytes=$packBytes")
+                    EventBus.emitGitEvent(EventBus.GitEvent(
+                        type = EventBus.GitEvent.PUSH,
+                        repo = repoPath.name,
+                        label = deviceLabel,
+                        bytes = packBytes,
+                        push = s,
+                    ))
                 }
             }
         }
@@ -176,6 +175,7 @@ sealed class GitCommand : Command {
 
     // -------------------------------------------------------------------------
 
+    /** Refuses the request with [reason] on stderr and exit status 1. */
     class RejectCommand(private val reason: String) : GitCommand() {
         override fun start(channel: ChannelSession, env: org.apache.sshd.server.Environment) {
             sendError(reason)
@@ -188,87 +188,18 @@ sealed class GitCommand : Command {
 
 // --- helpers -----------------------------------------------------------------
 
+/** Tells [GitHostService] a git session opened or closed, for its idle-timeout bookkeeping. */
 private fun signalSession(context: Context, open: Boolean) {
     val action = if (open) GitHostService.ACTION_SESSION_OPEN else GitHostService.ACTION_SESSION_CLOSE
     context.startService(Intent(context, GitHostService::class.java).setAction(action))
 }
 
+/** Publishes a git event without a push summary (used for fetches). */
 private fun broadcastEvent(type: String, repo: String, label: String) {
-    EventBus.emitGitEvent(EventBus.GitEvent(
-        type = type,
-        repo = repo,
-        label = label
-    ))
+    EventBus.emitGitEvent(EventBus.GitEvent(type = type, repo = repo, label = label))
 }
 
-private fun broadcastPush(
-    repo: String,
-    label: String,
-    branch: String,
-    bytes: Long,
-    added: Int,
-    modified: Int,
-    deleted: Int,
-) {
-    EventBus.emitGitEvent(EventBus.GitEvent(
-        type = "push",
-        repo = repo,
-        label = label,
-        branch = branch,
-        bytes = bytes,
-        added = added,
-        modified = modified,
-        deleted = deleted
-    ))
-}
-
-private fun diffStats(repo: Repository, oldId: ObjectId, newId: ObjectId): Triple<Int, Int, Int> {
-    return try {
-        RevWalk(repo).use { rw ->
-            val newCommit = rw.parseCommit(newId)
-            val oldTree = if (ObjectId.zeroId() == oldId) null
-                          else rw.parseCommit(oldId).tree
-            DiffFormatter(DisabledOutputStream.INSTANCE).use { df ->
-                df.setRepository(repo)
-                val entries = df.scan(oldTree, newCommit.tree)
-                var added = 0; var modified = 0; var deleted = 0
-                for (entry in entries) {
-                    when (entry.changeType) {
-                        DiffEntry.ChangeType.ADD    -> added++
-                        DiffEntry.ChangeType.MODIFY -> modified++
-                        DiffEntry.ChangeType.DELETE -> deleted++
-                        DiffEntry.ChangeType.RENAME -> modified++
-                        DiffEntry.ChangeType.COPY   -> added++
-                        else -> {}
-                    }
-                }
-                Triple(added, modified, deleted)
-            }
-        }
-    } catch (e: Exception) {
-        Log.w(TAG, "diffStats failed", e)
-        Triple(0, 0, 0)
-    }
-}
-
-private fun snapshotBranchRefs(repo: Repository): Map<String, ObjectId?> {
-    return repo.refDatabase
-        .getRefsByPrefix("refs/heads/")
-        .associate { ref -> ref.name to ref.objectId }
-}
-
-private fun findUpdatedBranchRef(
-    before: Map<String, ObjectId?>,
-    after: Map<String, ObjectId?>,
-): String? {
-    return after.keys
-        .sorted()
-        .firstOrNull { refName -> before[refName] != after[refName] }
-        ?: before.keys
-            .sorted()
-            .firstOrNull { refName -> before[refName] != after[refName] }
-}
-
+/** Opens the bare repository at [path], or returns null if it does not exist. */
 private fun openRepo(path: File): Repository? {
     if (!path.exists()) return null
     return FileRepositoryBuilder()
@@ -278,6 +209,10 @@ private fun openRepo(path: File): Repository? {
         .build()
 }
 
+/**
+ * Opens the bare repository at [path], first creating it with HEAD pointing
+ * at `main` if it does not exist yet (a repository is created by its first push).
+ */
 private fun ensureRepo(path: File): Repository {
     if (!path.exists()) {
         path.mkdirs()

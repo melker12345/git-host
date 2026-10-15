@@ -24,16 +24,22 @@ import com.journeyapps.barcodescanner.ScanOptions
 import com.localgithub.githost.EventBus
 import com.localgithub.githost.GitHostApp
 import com.localgithub.githost.pairing.parseDevicePairingUri
-import com.localgithub.githost.service.GitHostService
 import com.localgithub.githost.ui.theme.GitHub
 import com.localgithub.githost.whitelist.Whitelist
 import java.security.PublicKey
 
+/** Steps of the pairing flow: scan, approve, then a result. */
 private enum class PairState { IDLE, APPROVAL, DONE, ERROR }
 
 /** A scanned key waiting for the owner's decision. */
 private data class Candidate(val publicKey: PublicKey, val suggestedLabel: String)
 
+/**
+ * Pairs a new device. Its public key arrives by scanning the QR code printed
+ * by `git-host pair`, or as a githost://pair link opened on this phone; either
+ * way the owner checks the fingerprint, names the device and approves it,
+ * which adds the key to the whitelist.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PairScreen(navController: NavController) {
@@ -137,6 +143,7 @@ fun PairScreen(navController: NavController) {
     }
 }
 
+/** The starting step: explains pairing and offers the scanner. */
 @Composable
 private fun IdlePanel(onScan: () -> Unit) {
     Spacer(Modifier.height(24.dp))
@@ -160,6 +167,7 @@ private fun IdlePanel(onScan: () -> Unit) {
     )
 }
 
+/** A card describing one way to pair, with a button that starts it. */
 @Composable
 private fun OptionCard(
     icon: @Composable () -> Unit,
@@ -193,6 +201,7 @@ private fun OptionCard(
     }
 }
 
+/** Shows the scanned key's fingerprint and asks for a device name before approving. */
 @Composable
 private fun ApprovalPanel(
     fingerprint: String,
@@ -249,6 +258,7 @@ private fun ApprovalPanel(
     }
 }
 
+/** Confirmation after a device was approved. */
 @Composable
 private fun DonePanel(onBack: () -> Unit) {
     Spacer(Modifier.height(60.dp))
@@ -263,6 +273,7 @@ private fun DonePanel(onBack: () -> Unit) {
     Button(onClick = onBack, modifier = Modifier.fillMaxWidth()) { Text("Done") }
 }
 
+/** Shown when a scanned code is not a pairing code. */
 @Composable
 private fun ErrorPanel(message: String, onRetry: () -> Unit) {
     Spacer(Modifier.height(60.dp))

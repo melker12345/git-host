@@ -86,6 +86,7 @@ func (d Device) Names() []string {
 	return out
 }
 
+// resolves reports whether host currently resolves to any address.
 func resolves(host string) bool {
 	ips, err := net.LookupHost(host)
 	return err == nil && len(ips) > 0
@@ -138,6 +139,7 @@ func Browse(ctx context.Context, timeout time.Duration) ([]Device, error) {
 	return devices, nil
 }
 
+// trimDot strips the trailing dot of a fully qualified DNS name.
 func trimDot(s string) string {
 	for len(s) > 0 && s[len(s)-1] == '.' {
 		s = s[:len(s)-1]
@@ -182,6 +184,8 @@ func Find(ctx context.Context, cfgDir, want string, timeout time.Duration) (Devi
 		"  is the server running on the host device, and are you both on the same network?")
 }
 
+// pick chooses one device by the rules described on Find. It wraps
+// ErrAmbiguous when the choice is the user's to make.
 func pick(devices []Device, want string) (Device, error) {
 	if len(devices) == 0 {
 		return Device{}, errors.New("no devices")
@@ -269,8 +273,10 @@ func Pinned(cfgDir string) []Device {
 	return out
 }
 
+// cachePath is where discovered and pinned devices are remembered.
 func cachePath(cfgDir string) string { return filepath.Join(cfgDir, "devices.json") }
 
+// loadCache reads the device cache; a missing or corrupt file reads as empty.
 func loadCache(cfgDir string) []Device {
 	data, err := os.ReadFile(cachePath(cfgDir))
 	if err != nil {
@@ -346,6 +352,8 @@ func Reachable(host string, port int, timeout time.Duration) bool {
 
 // --- host keys ---------------------------------------------------------------
 
+// errKeyCaptured aborts the SSH handshake in FetchHostKey once the host key
+// has been seen; it never reaches callers.
 var errKeyCaptured = errors.New("host key captured")
 
 // FetchHostKey connects to host:port and returns the SSH host key the server

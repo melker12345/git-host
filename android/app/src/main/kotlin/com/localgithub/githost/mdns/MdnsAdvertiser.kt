@@ -22,6 +22,7 @@ class MdnsAdvertiser(context: Context) {
 
     private var registrationListener: NsdManager.RegistrationListener? = null
 
+    /** Registers the service on [port]. Registration is asynchronous; failures are only logged. */
     fun advertise(port: Int) {
         val info = NsdServiceInfo().apply {
             serviceName = deviceName
@@ -51,6 +52,7 @@ class MdnsAdvertiser(context: Context) {
         registrationListener = listener
     }
 
+    /** Withdraws the advertisement, if one was registered. */
     fun stop() {
         registrationListener?.let {
             runCatching { nsdManager.unregisterService(it) }

@@ -1,3 +1,5 @@
+// Package config manages the SSH host key of a git-host server run with
+// git-host serve. (Sync settings live in package syncer.)
 package config
 
 import (
@@ -12,6 +14,9 @@ import (
 	gossh "golang.org/x/crypto/ssh"
 )
 
+// LoadOrGenerateHostKey returns the server's SSH host key from path,
+// generating and saving a new Ed25519 key on first run. The key must persist:
+// clients pin it, and a new one would look like an impostor to them.
 func LoadOrGenerateHostKey(path string) (gossh.Signer, error) {
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		return generateHostKey(path)
@@ -19,6 +24,7 @@ func LoadOrGenerateHostKey(path string) (gossh.Signer, error) {
 	return loadHostKey(path)
 }
 
+// generateHostKey creates an Ed25519 key and writes it to path as PKCS#8 PEM.
 func generateHostKey(path string) (gossh.Signer, error) {
 	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
 		return nil, err
@@ -42,6 +48,7 @@ func generateHostKey(path string) (gossh.Signer, error) {
 	return gossh.NewSignerFromKey(priv)
 }
 
+// loadHostKey reads a PKCS#8 PEM private key written by generateHostKey.
 func loadHostKey(path string) (gossh.Signer, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {

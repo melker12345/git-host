@@ -11,6 +11,10 @@ import java.time.Instant
 
 private const val TAG = "Whitelist"
 
+/**
+ * One paired device. [publicKey] is null if [rawKey] could not be decoded,
+ * in which case the entry is listed but can never authenticate.
+ */
 data class WhitelistEntry(
     val rawKey: String,
     val label: String,
@@ -66,8 +70,10 @@ class Whitelist(private val file: File) {
         }
     }
 
+    /** All entries, including expired ones, in file order. */
     fun list(): List<WhitelistEntry> = loadEntries()
 
+    /** Pairs [pubkey] under [label] and returns its fingerprint. [expiryEpoch] 0 means permanent. */
     fun add(pubkey: PublicKey, label: String, expiryEpoch: Long = 0L): String {
         val rawKey = publicKeyToBase64Wire(pubkey)
             ?: throw IllegalArgumentException("Cannot encode public key")
@@ -79,6 +85,7 @@ class Whitelist(private val file: File) {
         return fingerprint(pubkey)
     }
 
+    /** Unpairs the device with this base64 wire key. Returns false if it was not paired. */
     fun removeByRawKey(rawKey: String): Boolean {
         val entries = loadEntries()
         val filtered = entries.filter { it.rawKey != rawKey }
@@ -98,6 +105,7 @@ class Whitelist(private val file: File) {
         fun sanitizeLabel(label: String): String =
             label.trim().replace(Regex("\\s+"), "-").ifEmpty { "unknown" }
 
+        /** Encodes [key] in SSH wire format, base64 — the first field of an authorized_keys line. */
         fun publicKeyToBase64Wire(key: PublicKey): String? = runCatching {
             val buf = ByteArrayBuffer()
             buf.putPublicKey(key)
@@ -128,11 +136,13 @@ class Whitelist(private val file: File) {
             return buf.array()
         }
 
+        /** Inverse of [publicKeyToBase64Wire]; null for anything that is not a valid key. */
         fun base64WireToPublicKey(raw: String): PublicKey? = runCatching {
             val bytes = Base64.decode(raw, Base64.NO_WRAP)
             ByteArrayBuffer(bytes).rawPublicKey
         }.getOrNull()
 
+        /** OpenSSH-style `SHA256:...` fingerprint, matching `ssh-keygen -l` and the Go CLI. */
         fun fingerprint(key: PublicKey): String = runCatching {
             val buf = ByteArrayBuffer()
             buf.putPublicKey(key)

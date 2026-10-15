@@ -24,6 +24,10 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
+/**
+ * The paired devices, i.e. the whitelist. Tapping a device shows its key
+ * fingerprint and lets the owner remove it; the + button opens [PairScreen].
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DevicesScreen(navController: NavController) {
@@ -125,6 +129,7 @@ fun DevicesScreen(navController: NavController) {
     }
 }
 
+/** "Permanent", "Expires 2026-01-31" or "Expired 2026-01-31". */
 private fun expiryText(entry: WhitelistEntry): String {
     if (entry.expiry == 0L) return "Permanent"
     val date = Instant.ofEpochSecond(entry.expiry)
@@ -133,6 +138,7 @@ private fun expiryText(entry: WhitelistEntry): String {
     return if (expired) "Expired $date" else "Expires $date"
 }
 
+/** One device row: label, fingerprint (or the key's tail if it cannot be decoded) and expiry. */
 @Composable
 private fun DeviceItem(entry: WhitelistEntry, onClick: () -> Unit) {
     val fp = entry.publicKey?.let { Whitelist.fingerprint(it) }

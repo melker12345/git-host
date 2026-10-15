@@ -14,6 +14,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.localgithub.githost.service.GitHostService
 
+/** Idle auto-stop choices: minutes (as stored in preferences) to label. */
 private val IDLE_TIMEOUT_OPTIONS = listOf(
     0   to "Never",
     5   to "5 minutes",
@@ -22,6 +23,10 @@ private val IDLE_TIMEOUT_OPTIONS = listOf(
     240 to "4 hours",
 )
 
+/**
+ * Server settings. Changes are written to preferences immediately; the port
+ * takes effect the next time the server starts.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen() {

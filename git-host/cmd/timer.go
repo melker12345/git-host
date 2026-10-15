@@ -7,9 +7,11 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/melker/git-host/internal/syncer"
 	"github.com/spf13/cobra"
 )
 
+// timerName is the base name of the systemd user units timer install writes.
 const timerName = "git-host-sync"
 
 var timerCmd = &cobra.Command{
@@ -22,7 +24,9 @@ var timerInstallCmd = &cobra.Command{
 	Short: "Install and start a systemd user timer that runs git-host sync",
 	Long: `Writes ~/.config/systemd/user/git-host-sync.{service,timer} and enables the
 timer. sync exits quietly when the host is not reachable, so the timer can
-fire whether or not the phone is around.
+fire whether or not the phone is around. Failed pushes, and a host that has
+not been reached for warn_after, make the run fail; see them with
+'git-host timer status'.
 
   git-host timer install                 # every 30 minutes
   git-host timer install --every 2h
@@ -98,6 +102,7 @@ var timerStatusCmd = &cobra.Command{
 	Use:   "status",
 	Short: "Show whether the sync timer is active and when it last ran",
 	RunE: func(cmd *cobra.Command, args []string) error {
+		printSyncState()
 		c := exec.Command("systemctl", "--user", "list-timers", timerName+".timer", "--no-pager")
 		c.Stdout, c.Stderr = os.Stdout, os.Stderr
 		if err := c.Run(); err != nil {
@@ -109,6 +114,26 @@ var timerStatusCmd = &cobra.Command{
 	},
 }
 
+// printSyncState summarises the last runs recorded by sync.
+func printSyncState() {
+	st := syncer.LoadState(cfgDir)
+	now := time.Now()
+	switch {
+	case st.LastRun.IsZero():
+		fmt.Println("sync has not run yet.")
+	case st.LastSuccess.IsZero():
+		fmt.Printf("No successful sync yet (last attempt %s ago).\n", ago(now.Sub(st.LastRun)))
+	default:
+		fmt.Printf("Last successful sync: %s ago, to %s (last attempt %s ago).\n",
+			ago(now.Sub(st.LastSuccess)), orUnknown(st.Device), ago(now.Sub(st.LastRun)))
+	}
+	if st.LastError != "" {
+		fmt.Printf("Last error: %s\n", st.LastError)
+	}
+	fmt.Println()
+}
+
+// systemdUserDir returns ~/.config/systemd/user, creating it if needed.
 func systemdUserDir() (string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {

@@ -22,7 +22,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import com.localgithub.githost.EventBus
 import com.localgithub.githost.MainActivity
@@ -36,7 +35,20 @@ private const val TAG = "GitHostService"
 private const val CHANNEL_ID = "git_host_server"
 private const val EVENT_CHANNEL_ID = "git_host_events"
 private const val NOTIF_ID = 1
+private const val EVENT_SUMMARY_ID = 2
+private const val EVENT_ID_BASE = 1000
+private const val EVENT_GROUP = "git_host_activity"
 
+/**
+ * Foreground service that owns the SSH server and its mDNS advertisement,
+ * and turns git events into activity notifications and last-push records.
+ *
+ * Everything is driven by intent actions (see the companion object):
+ * [ACTION_START] / [ACTION_STOP] from the UI and the notification, and
+ * [ACTION_SESSION_OPEN] / [ACTION_SESSION_CLOSE] from each git command, which
+ * keep a count of live sessions so the optional idle timeout never stops the
+ * server mid-transfer.
+ */
 class GitHostService : Service() {
 
     private var sshServer: GitSshServer? = null
@@ -52,12 +64,13 @@ class GitHostService : Service() {
     override fun onCreate() {
         super.onCreate()
         gitEventsJob = serviceScope.launch {
-            EventBus.gitEvents.collectLatest { event ->
+            EventBus.gitEvents.collect { event ->
                 handleGitEvent(event)
             }
         }
     }
 
+    /** Dispatches on the intent action; see the class comment. */
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ACTION_SESSION_OPEN -> {
@@ -92,6 +105,12 @@ class GitHostService : Service() {
         return START_STICKY
     }
 
+    /**
+     * Starts the SSH server (blocking; runs on an IO coroutine) and then
+     * advertises it over mDNS. A no-op if it is already running or starting.
+     * A port still held by a previous instance is retried once after 2 s;
+     * any other failure stops the service.
+     */
     @Synchronized
     private fun startServer() {
         if (sshServer?.isRunning == true || starting) return
@@ -144,6 +163,7 @@ class GitHostService : Service() {
         mdnsAdvertiser = advertiser
     }
 
+    /** Stops the server and advertisement and takes the service out of the foreground. */
     private fun stopServer() {
         sshServer?.stop()
         sshServer = null
@@ -167,6 +187,7 @@ class GitHostService : Service() {
         super.onDestroy()
     }
 
+    /** (Re)arms the idle timer from the current preference; 0 minutes means never. */
     private fun scheduleIdleTimeout() {
         idleHandler.removeCallbacks(idleRunnable)
         val minutes = prefs().getInt(PREF_IDLE_TIMEOUT, 0)
@@ -175,6 +196,10 @@ class GitHostService : Service() {
         Log.d(TAG, "Idle timeout scheduled in ${minutes}min")
     }
 
+    /**
+     * Stops the server when the idle timer fires, unless a session is active
+     * or the app is on screen, in which case the check is retried shortly.
+     */
     private fun onIdleTimeout() {
         if (activeSessions.get() > 0) {
             Log.d(TAG, "Idle timeout fired but sessions active — deferring")
@@ -188,7 +213,8 @@ class GitHostService : Service() {
         }
         Log.i(TAG, "Idle timeout: stopping server")
         prefs().edit().putBoolean(PREF_SERVICE_RUNNING, false).apply()
-        postEventNotification("SSH server stopped (idle timeout)")
+        postEventNotification(key = "server", title = "SSH server stopped",
+            text = "Stopped after the idle timeout. Open git-host to start it again.")
         EventBus.emitServerStopped()
         stopServer()
     }
@@ -201,38 +227,31 @@ class GitHostService : Service() {
 
     // -------------------------------------------------------------------------
 
+    /**
+     * Records a push on the repository's card and tells the user about it.
+     * Only pushes that changed something reach here (see ReceivePackCommand),
+     * so a routine sync of unchanged repositories stays silent.
+     */
     private fun handleGitEvent(event: EventBus.GitEvent) {
-        val repoDisplay = event.repo.removeSuffix(".git")
-        val msg = when (event.type) {
-            "push" -> {
-                val branch = event.branch ?: "unknown"
-                val sizeStr = if (event.bytes >= 0) formatBytes(event.bytes) else "?"
-                "${event.label} → $repoDisplay/$branch  [${event.added}, ${event.modified}, ${event.deleted}]  $sizeStr"
+        val repo = event.repo.removeSuffix(".git")
+        when (event.type) {
+            EventBus.GitEvent.PUSH -> {
+                val push = event.push ?: return
+                LastPush.record(prefs(), event)
+                val details = push.details(event.bytes)
+                Log.i(TAG, "push from ${event.label} to $repo: ${push.headline()} $details")
+                postEventNotification(
+                    key = event.repo,
+                    title = "${event.label} pushed to $repo",
+                    text = listOf(push.headline(), details).filter { it.isNotEmpty() }.joinToString(" · "),
+                )
             }
-            "pull" -> "${event.label} cloned $repoDisplay"
-            else -> "${event.label}: ${event.type} on $repoDisplay"
+            EventBus.GitEvent.PULL ->
+                postEventNotification(key = event.repo, title = "${event.label} fetched $repo", text = null)
         }
-        Log.i(TAG, "GIT_EVENT received: $msg")
-        if (event.type == "push") recordLastPush(event)
-        postEventNotification(msg)
     }
 
-    /** Remembered per repository so the repo list can show who pushed what, and when. */
-    private fun recordLastPush(event: EventBus.GitEvent) {
-        val k = "last_push_${event.repo}_"
-        prefs().edit()
-            .putString(k + "label", event.label)
-            // A push that updates no refs has no branch; keep the last known one.
-            .putString(k + "branch", event.branch?.takeIf { it != "unknown" }
-                ?: prefs().getString(k + "branch", null))
-            .putLong(k + "bytes", event.bytes)
-            .putInt(k + "added", event.added)
-            .putInt(k + "modified", event.modified)
-            .putInt(k + "deleted", event.deleted)
-            .putLong(k + "time", System.currentTimeMillis())
-            .apply()
-    }
-
+    /** The ongoing foreground notification, with a Stop action. */
     private fun buildNotification(port: Int): Notification {
         ensureChannel()
         val tapIntent = PendingIntent.getActivity(
@@ -255,7 +274,13 @@ class GitHostService : Service() {
             .build()
     }
 
-    private fun postEventNotification(msg: String) {
+    /**
+     * Posts an activity notification. Notifications share one id per
+     * repository ([key]), so repeated pushes to a repo replace each other
+     * instead of piling up, and they are grouped so a sync touching many
+     * repositories collapses into one entry.
+     */
+    private fun postEventNotification(key: String, title: String, text: String?) {
         ensureEventChannel()
         val tapIntent = PendingIntent.getActivity(
             this, 0,
@@ -264,15 +289,26 @@ class GitHostService : Service() {
         )
         val notif = NotificationCompat.Builder(this, EVENT_CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_server)
-            .setContentTitle("git-host")
-            .setContentText(msg)
+            .setContentTitle(title)
+            .apply { if (text != null) setContentText(text) }
             .setContentIntent(tapIntent)
+            .setGroup(EVENT_GROUP)
             .setAutoCancel(true)
             .build()
         val mgr = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        mgr.notify(System.currentTimeMillis().toInt(), notif)
+        // Ids 1 and 2 belong to the server and group summary notifications.
+        mgr.notify(EVENT_ID_BASE + (key.hashCode() and 0xFFFFFF), notif)
+        mgr.notify(EVENT_SUMMARY_ID, NotificationCompat.Builder(this, EVENT_CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_server)
+            .setContentTitle("git-host activity")
+            .setContentIntent(tapIntent)
+            .setGroup(EVENT_GROUP)
+            .setGroupSummary(true)
+            .setAutoCancel(true)
+            .build())
     }
 
+    /** Creates the low-importance channel for the ongoing server notification. */
     private fun ensureChannel() {
         val mgr = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         if (mgr.getNotificationChannel(CHANNEL_ID) != null) return
@@ -282,6 +318,7 @@ class GitHostService : Service() {
         )
     }
 
+    /** Creates the channel for push/pull activity notifications. */
     private fun ensureEventChannel() {
         val mgr = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         if (mgr.getNotificationChannel(EVENT_CHANNEL_ID) != null) return
@@ -292,12 +329,6 @@ class GitHostService : Service() {
     }
 
     private fun prefs() = getSharedPreferences("git_host_prefs", Context.MODE_PRIVATE)
-
-    private fun formatBytes(bytes: Long): String = when {
-        bytes < 1024        -> "${bytes} B"
-        bytes < 1024 * 1024 -> "${"%.1f".format(bytes / 1024.0)} KB"
-        else                -> "${"%.1f".format(bytes / (1024.0 * 1024))} MB"
-    }
 
     companion object {
         const val ACTION_START          = "com.localgithub.githost.START"
@@ -313,6 +344,10 @@ class GitHostService : Service() {
         const val PREF_IDLE_TIMEOUT = "idle_timeout_minutes"
         const val PREF_SERVICE_RUNNING = "service_running"
 
+        /**
+         * Whether the server was last seen running. Read from preferences so
+         * it can be asked without binding to the service.
+         */
         fun isRunning(context: Context): Boolean {
             return context.getSharedPreferences("git_host_prefs", Context.MODE_PRIVATE)
                 .getBoolean(PREF_SERVICE_RUNNING, false)

@@ -25,7 +25,7 @@ func ListRemote(cfg Config, host string) ([]string, error) {
 	var names []string
 	for _, line := range strings.Split(string(out), "\n") {
 		line = strings.TrimSpace(line)
-		if line == "" || strings.HasPrefix(line, "**") || strings.Contains(line, "post-quantum") {
+		if line == "" || isSSHNoise(line) {
 			continue
 		}
 		names = append(names, strings.TrimSuffix(line, ".git"))

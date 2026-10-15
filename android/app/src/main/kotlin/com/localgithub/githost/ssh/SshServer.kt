@@ -32,7 +32,7 @@ private const val TAG = "SshServer"
 /**
  * Wraps Apache MINA SSHD. Implements the Behavior Contract:
  * - Ed25519 pubkey auth against the whitelist
- * - Only git-upload-pack and git-receive-pack exec commands accepted
+ * - Only git-upload-pack, git-receive-pack and [LIST_COMMAND] exec commands accepted
  * - Path resolution: strip leading /, resolve against baseDir, guard traversal
  * - Auto-init bare repo on first push (handled by ReceivePackCommand)
  */
@@ -45,6 +45,7 @@ class GitSshServer(
 ) {
     private var server: SshServer? = null
 
+    /** Configures and starts the server. Blocking; throws if the port cannot be bound. */
     fun start() {
         // Build server manually instead of setUpDefaultServer() to bypass the
         // isSupported() checks that require BC/JMX — those silently fail on
@@ -120,6 +121,11 @@ class GitSshServer(
 
     val isRunning: Boolean get() = server?.isStarted == true
 
+    /**
+     * Maps an exec request to the [GitCommand] that serves it. [entry] is the
+     * whitelist entry stored on the session at authentication; anything not
+     * explicitly allowed is answered with a [GitCommand.RejectCommand].
+     */
     private fun handleCommand(rawCommand: String, entry: WhitelistEntry?): org.apache.sshd.server.command.Command {
         if (entry == null) return GitCommand.RejectCommand("not authenticated")
 
@@ -155,6 +161,7 @@ class GitSshServer(
         /** The one non-git command accepted: prints the repositories held, one per line. */
         const val LIST_COMMAND = "git-host-ls"
 
+        /** Session attribute holding the authenticated device's [WhitelistEntry]. */
         val SESSION_ENTRY_KEY = org.apache.sshd.common.AttributeRepository.AttributeKey<WhitelistEntry>()
 
         /**

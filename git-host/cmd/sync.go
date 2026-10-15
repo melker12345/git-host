@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -19,12 +19,19 @@ var syncCmd = &cobra.Command{
 	Long: `Pushes every repository matched by the [dirs] entries in sync.conf to the
 host device, finding it on the network automatically.
 
-If the host is not reachable — the server is not running, or you are on a
-different network — this reports that and exits without error, so it is safe to
-run from a script.`,
+If the host is not reachable (the app is closed, or you are on a different
+network) this says so and exits without error, so it is safe to run from a
+timer. Missed backups are still noticed: once no sync has reached the host
+for longer than warn_after (3 days by default), sync exits with an error.`,
 	RunE: runSync,
 }
 
+// errUnreachable marks a run where the host could not be reached. It is not
+// a failure by itself; runSync decides whether it has gone on for too long.
+var errUnreachable = errors.New("host not reachable")
+
+// runSync loads sync.conf (creating a starter one on first use), pushes the
+// selected repositories, and records the outcome for overdue detection.
 func runSync(cmd *cobra.Command, args []string) error {
 	cfgPath, _ := cmd.Flags().GetString("config")
 	if cfgPath == "" {
@@ -74,32 +81,55 @@ func runSync(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	trustNew, _ := cmd.Flags().GetBool("trust-new")
-	host, err := resolveHost(cmd, &cfg, trustNew)
-	if err != nil {
+	device, err := pushAll(cmd, &cfg, repos, dryRun)
+	if dryRun {
+		if errors.Is(err, errUnreachable) {
+			return nil
+		}
 		return err
+	}
+	// A run limited by --only is not a full backup, so it must not reset the
+	// clock that detects missed backups.
+	return recordOutcome(cfg, device, err, only == "")
+}
+
+// pushAll pushes repos to the configured host and returns the device it
+// chose. It returns errUnreachable when the host cannot be reached, and an
+// ordinary error when the host cannot be chosen or any push fails.
+func pushAll(cmd *cobra.Command, cfg *syncer.Config, repos []syncer.Repo, dryRun bool) (string, error) {
+	trustNew, _ := cmd.Flags().GetBool("trust-new")
+	dev, err := resolveHost(cmd, cfg, trustNew)
+	if err != nil {
+		return dev.Name, err
 	}
 	cfg.KnownHosts, err = discovery.WriteKnownHosts(cfgDir)
 	if err != nil {
-		return fmt.Errorf("write known_hosts: %w", err)
+		return dev.Name, fmt.Errorf("write known_hosts: %w", err)
 	}
 
-	// An unreachable host is an ordinary condition, not a failure: the server
-	// stops itself when idle. Say so plainly instead of emitting one SSH error
-	// per repository.
-	if !dryRun && !discovery.Reachable(host, cfg.Port, 5*time.Second) {
-		fmt.Printf("Host %s:%d is not reachable — nothing synced.\n", host, cfg.Port)
-		fmt.Println("Is the server running on the host device, and are you on the same network?")
-		return nil
+	host := dev.Addr()
+	target := describeDevice(dev, host)
+
+	// The server stops itself when idle, so an unreachable host is the normal
+	// case for a timer. Say so once instead of one SSH error per repository.
+	if !discovery.Reachable(host, cfg.Port, 5*time.Second) {
+		fmt.Printf("%s is not reachable — nothing synced.\n", target)
+		fmt.Println("Is the git-host app open on the device, and are you on the same network?")
+		return dev.Name, errUnreachable
 	}
 
-	fmt.Printf("Syncing %d repositories to %s (%s)\n\n", len(repos), host, cfg.Mode)
+	verb := "Syncing"
+	if dryRun {
+		verb = "Dry run:"
+	}
+	fmt.Printf("%s %d repositories to %s, %s mode\n\n", verb, len(repos), target, cfg.Mode)
 
 	start := time.Now()
 	results := make([]syncer.Result, 0, len(repos))
+	var failed []string
 	for _, repo := range repos {
 		fmt.Printf("  %-40s ", repo.Name)
-		res := syncer.Sync(repo, cfg, host, dryRun)
+		res := syncer.Sync(repo, *cfg, host, dryRun)
 		results = append(results, res)
 		switch res.Status {
 		case syncer.StatusPushed:
@@ -108,6 +138,7 @@ func runSync(cmd *cobra.Command, args []string) error {
 			fmt.Printf("skipped (%s)\n", res.Reason)
 		case syncer.StatusFailed:
 			fmt.Printf("FAILED\n      %s\n", res.Reason)
+			failed = append(failed, repo.Name)
 		}
 	}
 
@@ -115,10 +146,95 @@ func runSync(cmd *cobra.Command, args []string) error {
 	fmt.Printf("\n%d pushed, %d skipped, %d failed in %s\n",
 		s.Pushed, s.Skipped, s.Failed, s.Elapsed.Round(time.Millisecond))
 
-	if s.Failed > 0 {
-		return fmt.Errorf("%d repositories failed to sync", s.Failed)
+	if len(failed) > 0 {
+		return dev.Name, fmt.Errorf("%d of %d repositories failed to sync to %s: %s",
+			len(failed), len(repos), dev.Name, strings.Join(failed, ", "))
 	}
-	return nil
+	return dev.Name, nil
+}
+
+// recordOutcome saves what this run achieved and turns it into the exit
+// status: nil for a successful sync or a tolerable unreachable host, an error
+// for failed pushes or a backup that is overdue. full says whether every
+// configured repository was attempted.
+func recordOutcome(cfg syncer.Config, device string, runErr error, full bool) error {
+	now := time.Now()
+	state := syncer.LoadState(cfgDir)
+	if state.FirstRun.IsZero() {
+		state.FirstRun = now
+	}
+	state.LastRun = now
+
+	var err error
+	switch {
+	case runErr == nil:
+		if full {
+			state.LastSuccess = now
+			state.Device = device
+		}
+		state.LastError = ""
+	case errors.Is(runErr, errUnreachable):
+		if state.Overdue(now, cfg.WarnAfter) {
+			err = fmt.Errorf("no backup has reached %s since %s (%s ago)",
+				orUnknown(device), state.Since().Format("Mon 2 Jan 15:04"), ago(now.Sub(state.Since())))
+		} else if !state.LastSuccess.IsZero() {
+			fmt.Printf("Last successful sync: %s ago.\n", ago(now.Sub(state.LastSuccess)))
+		}
+	default:
+		err = runErr
+	}
+
+	if err != nil {
+		state.LastError = err.Error()
+	}
+
+	if saveErr := state.Save(cfgDir); saveErr != nil {
+		fmt.Fprintf(os.Stderr, "warning: could not save sync state: %v\n", saveErr)
+	}
+	return err
+}
+
+// ago renders a duration coarsely: "40 minutes", "5 hours", "3 days".
+func ago(d time.Duration) string {
+	switch {
+	case d < time.Minute:
+		return "less than a minute"
+	case d < time.Hour:
+		return plural(int(d/time.Minute), "minute")
+	case d < 48*time.Hour:
+		return plural(int(d/time.Hour), "hour")
+	default:
+		return plural(int(d/(24*time.Hour)), "day")
+	}
+}
+
+// plural renders a count with its unit, e.g. "1 hour", "3 hours".
+func plural(n int, unit string) string {
+	if n == 1 {
+		return "1 " + unit
+	}
+	return fmt.Sprintf("%d %ss", n, unit)
+}
+
+// orUnknown names a device for messages, when sync never learned its name.
+func orUnknown(s string) string {
+	if s == "" {
+		return "the host"
+	}
+	return s
+}
+
+// filterRepos keeps the repositories --only refers to. It accepts the name
+// on the host ("code-foo"), the directory name ("foo"), or the part after
+// the prefix, so the user need not remember which prefix a repo got.
+func filterRepos(repos []syncer.Repo, want string) []syncer.Repo {
+	var out []syncer.Repo
+	for _, r := range repos {
+		if r.Name == want || filepath.Base(r.Path) == want || strings.HasSuffix(r.Name, "-"+want) {
+			out = append(out, r)
+		}
+	}
+	return out
 }
 
 // reportEmpty explains why nothing was found, rather than leaving the user to
@@ -139,64 +255,6 @@ func reportEmpty(cfg syncer.Config, cfgPath string) {
 	}
 	fmt.Printf("\nA directory only counts if it contains .git — check whether your repos\n")
 	fmt.Printf("are one level deeper or shallower than the pattern, and edit [dirs].\n")
-}
-
-// resolveHost turns the configured host into an address to dial, discovering
-// it on the network when set to "auto". A discovered device also supplies
-// the port it advertises, unless --port was given explicitly.
-//
-// Only a device whose SSH host key was pinned at pairing is accepted:
-// anything on the LAN can advertise the service, and a mirror push would
-// hand it every repository. --trust-new pins the key the host presents now.
-func resolveHost(cmd *cobra.Command, cfg *syncer.Config, trustNew bool) (string, error) {
-	var d discovery.Device
-	if cfg.Host != "" && cfg.Host != "auto" {
-		var ok bool
-		if d, ok = discovery.Lookup(cfgDir, cfg.Host, cfg.Port); !ok {
-			d = discovery.Device{Name: cfg.Host, Host: cfg.Host, Port: cfg.Port}
-		}
-		d.Port = cfg.Port
-	} else {
-		var err error
-		d, err = discovery.Find(context.Background(), cfgDir, cfg.Device, 5*time.Second)
-		if err != nil {
-			return "", err
-		}
-		if d.Cached {
-			fmt.Printf("Discovery found nothing; using last known address for %s\n", d.Name)
-		}
-		if d.Port != 0 && !cmd.Flags().Changed("port") {
-			cfg.Port = d.Port
-		}
-	}
-
-	if !d.Pinned() {
-		if !trustNew {
-			return "", fmt.Errorf("%s has no pinned SSH host key, so it cannot be trusted with a push\n"+
-				"  pair with it first:  git-host pair\n"+
-				"  or trust the key it presents right now:  git-host sync --trust-new", d.Name)
-		}
-		key, err := discovery.FetchHostKey(d.Addr(), d.Port, 5*time.Second)
-		if err != nil {
-			return "", fmt.Errorf("fetch host key from %s: %w", d.Name, err)
-		}
-		d.HostKey = discovery.MarshalHostKey(key)
-		if err := discovery.Pin(cfgDir, d); err != nil {
-			return "", err
-		}
-		fmt.Printf("Pinned host key for %s: %s\n", d.Name, d.HostKeyFingerprint())
-	}
-	return d.Addr(), nil
-}
-
-func filterRepos(repos []syncer.Repo, want string) []syncer.Repo {
-	var out []syncer.Repo
-	for _, r := range repos {
-		if r.Name == want || filepath.Base(r.Path) == want || strings.HasSuffix(r.Name, "-"+want) {
-			out = append(out, r)
-		}
-	}
-	return out
 }
 
 func init() {

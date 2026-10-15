@@ -19,14 +19,21 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 
+/** The top-level destinations, in bottom-bar order. The pair screen is reached from Devices. */
 private val bottomNavItems = listOf(
     BottomNavItem("repos",   "Repos",   Icons.Default.FolderOpen),
     BottomNavItem("devices", "Devices", Icons.Default.Devices),
     BottomNavItem("settings","Settings",Icons.Default.Settings),
 )
 
-data class BottomNavItem(val route: String, val label: String, val icon: androidx.compose.ui.graphics.vector.ImageVector)
+/** A bottom-bar destination: its navigation route, label and icon. */
+private data class BottomNavItem(val route: String, val label: String, val icon: androidx.compose.ui.graphics.vector.ImageVector)
 
+/**
+ * Root of the UI: the bottom navigation bar and the screens it switches
+ * between. Also navigates to the pair screen when a githost://pair link
+ * arrives while the app is open.
+ */
 @Composable
 fun AppNavHost() {
     val navController = rememberNavController()

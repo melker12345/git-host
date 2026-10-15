@@ -16,8 +16,10 @@ import androidx.compose.ui.unit.sp
 object GitHub {
     val Canvas        = Color(0xFF0D1117)  // page background
     val CanvasSubtle  = Color(0xFF161B22)  // cards, bars
-    val CanvasInset   = Color(0xFF010409)  // code blocks
-    val Overlay       = Color(0xFF1A2330)  // hovered / selected rows
+    val CanvasInset   = Color(0xFF010409)  // deepest inset surfaces
+    val CodeHeader    = Color(0xFF1C2128)  // language bar above a code block
+    val TabUnderline  = Color(0xFFF78166)  // selected tab marker
+    val InlineCode    = Color(0x33656C76)  // `inline code` background, 20% gray
     val Border        = Color(0xFF30363D)
     val BorderMuted   = Color(0xFF21262D)
     val Fg            = Color(0xFFE6EDF3)
@@ -32,7 +34,6 @@ object GitHub {
     val Attention     = Color(0xFFD29922)
     val Danger        = Color(0xFFFF7B72)
     val DangerSubtle  = Color(0xFF3B1210)
-    val DangerMuted   = Color(0xFF2D0D0A)
     val OnDanger      = Color(0xFFFFDAD6)
 }
 
@@ -92,6 +93,7 @@ private val GitHubTypography = Typography(
     labelSmall = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Medium, lineHeight = 16.sp),
 )
 
+/** Applies the GitHub dark scheme, shapes and type scale. The app has no light theme. */
 @Composable
 fun GitHostTheme(content: @Composable () -> Unit) {
     MaterialTheme(

@@ -30,6 +30,8 @@ Examples:
 	RunE: runRestore,
 }
 
+// runRestore clones the host's repositories that are missing locally, or
+// just lists them with --list.
 func runRestore(cmd *cobra.Command, args []string) error {
 	cfgPath, _ := cmd.Flags().GetString("config")
 	if cfgPath == "" {
@@ -49,17 +51,20 @@ func runRestore(cmd *cobra.Command, args []string) error {
 	into, _ := cmd.Flags().GetString("into")
 	trustNew, _ := cmd.Flags().GetBool("trust-new")
 
-	host, err := resolveHost(cmd, &cfg, trustNew)
+	dev, err := resolveHost(cmd, &cfg, trustNew)
 	if err != nil {
 		return err
 	}
+	host := dev.Addr()
 	cfg.KnownHosts, err = discovery.WriteKnownHosts(cfgDir)
 	if err != nil {
 		return fmt.Errorf("write known_hosts: %w", err)
 	}
 	if !discovery.Reachable(host, cfg.Port, 5*time.Second) {
-		return fmt.Errorf("host %s:%d is not reachable\n  is the server running on the host device, and are you on the same network?", host, cfg.Port)
+		return fmt.Errorf("%s is not reachable\n  is the git-host app open on the device, and are you on the same network?",
+			describeDevice(dev, host))
 	}
+	fmt.Printf("Host: %s\n\n", describeDevice(dev, host))
 
 	names, err := syncer.ListRemote(cfg, host)
 	if err != nil {
@@ -151,7 +156,9 @@ func runRestore(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-// prefixOf returns "<prefix>-" for the longest [dirs] prefix that name starts with.
+// prefixOf returns "<prefix>-" for the longest [dirs] prefix that name starts
+// with, or "" if none does. With --into, it is stripped so the clone gets the
+// local directory name rather than the name on the host.
 func prefixOf(cfg syncer.Config, name string) string {
 	best := ""
 	for _, d := range cfg.Dirs {

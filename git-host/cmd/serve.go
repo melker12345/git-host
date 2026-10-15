@@ -16,6 +16,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// serveCmd runs this machine as a git-host server, the same role the Android
+// app plays: an SSH server accepting only whitelisted keys, advertised over
+// mDNS so that sync and pair on other machines can find it.
 var serveCmd = &cobra.Command{
 	Use:   "serve",
 	Short: "Start the git-host SSH server",

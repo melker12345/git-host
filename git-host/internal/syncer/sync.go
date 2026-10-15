@@ -11,10 +11,11 @@ import (
 // Status is the outcome of syncing one repository.
 type Status int
 
+// The possible outcomes of syncing a repository.
 const (
-	StatusPushed Status = iota
-	StatusSkipped
-	StatusFailed
+	StatusPushed  Status = iota // pushed (or nothing new to push)
+	StatusSkipped               // not attempted; Result.Reason says why
+	StatusFailed                // git failed; Result.Reason has its output
 )
 
 // Result reports what happened to one repository.
@@ -25,7 +26,7 @@ type Result struct {
 	Reason string
 }
 
-// RemoteURL is where a repository is pushed on the host.
+// RemoteURL is the URL of the repository called name on the host.
 func RemoteURL(host string, port int, name string) string {
 	return fmt.Sprintf("ssh://git@%s:%d/%s.git", host, port, name)
 }
@@ -51,7 +52,8 @@ func pushArgs(mode Mode, url string) []string {
 	return []string{"push", "--mirror", url}
 }
 
-// Sync pushes one repository to the host.
+// Sync pushes one repository to the host, as cfg.Mode says. A repository
+// with no refs is skipped, since there is nothing to back up yet.
 func Sync(repo Repo, cfg Config, host string, dryRun bool) Result {
 	if !hasRefs(repo.Path) {
 		return Result{Repo: repo, Status: StatusSkipped, Reason: "no commits yet"}
@@ -80,15 +82,21 @@ func hasRefs(path string) bool {
 	return err == nil && len(strings.TrimSpace(string(out))) > 0
 }
 
+// isSSHNoise reports whether line is an advisory ssh prints on every
+// connection (OpenSSH 9.x's post-quantum warning), which is never the error
+// and never output of the remote command.
+func isSSHNoise(line string) bool {
+	return strings.HasPrefix(line, "**") ||
+		strings.Contains(line, "post-quantum") ||
+		strings.Contains(line, "openssh.com/pq")
+}
+
 // cleanGitError trims git's output down to something worth printing.
 func cleanGitError(out string, err error) string {
 	var kept []string
 	for _, line := range strings.Split(out, "\n") {
 		line = strings.TrimSpace(line)
-		// OpenSSH 9.x prints a post-quantum advisory on every connection.
-		if line == "" || strings.HasPrefix(line, "**") ||
-			strings.Contains(line, "post-quantum") ||
-			strings.Contains(line, "openssh.com/pq") {
+		if line == "" || isSSHNoise(line) {
 			continue
 		}
 		kept = append(kept, line)
@@ -99,7 +107,7 @@ func cleanGitError(out string, err error) string {
 	return strings.Join(kept, "; ")
 }
 
-// Summary counts results by status.
+// Summary counts results by status, for the line printed after a sync.
 type Summary struct {
 	Pushed  int
 	Skipped int
@@ -107,6 +115,7 @@ type Summary struct {
 	Elapsed time.Duration
 }
 
+// Summarize counts results; elapsed is passed through for reporting.
 func Summarize(results []Result, elapsed time.Duration) Summary {
 	s := Summary{Elapsed: elapsed}
 	for _, r := range results {

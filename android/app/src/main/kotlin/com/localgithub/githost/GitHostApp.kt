@@ -2,11 +2,15 @@ package com.localgithub.githost
 
 import android.app.Application
 import com.localgithub.githost.whitelist.Whitelist
-import com.localgithub.githost.service.GitHostService
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import java.io.File
 import java.security.Security
 
+/**
+ * Application singleton: owns the on-disk layout (config and repository
+ * directories) and the shared [Whitelist], and sets up the JVM properties
+ * and crypto provider MINA SSHD needs before any SSH class is loaded.
+ */
 class GitHostApp : Application() {
 
     val cfgDir: File by lazy { File(filesDir, "config").also { it.mkdirs() } }

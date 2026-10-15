@@ -35,6 +35,9 @@ Examples:
 	RunE:    runPair,
 }
 
+// runPair shows the pairing QR code, then locates the host to pin its SSH
+// host key and write an SSH config entry. Failing to find the host is not
+// an error: the QR code has already done the part that matters.
 func runPair(cmd *cobra.Command, args []string) error {
 	hostAddr, _ := cmd.Flags().GetString("host")
 	deviceName, _ := cmd.Flags().GetString("name")
@@ -223,10 +226,12 @@ func rejectEd25519(pubkeyPath string) error {
 	return nil
 }
 
+// sshConfigBlock renders the ~/.ssh/config entry pair writes for a host.
+//
+// Host keys are pinned per device in git-host's own known_hosts, which sync
+// uses. Plain git/ssh use gets accept-new: recorded on first use, refused if
+// it ever changes.
 func sshConfigBlock(alias, hostAddr string, sshPort int, identityFile string) string {
-	// Host keys are pinned per device in git-host's own known_hosts, which
-	// sync uses. Plain git/ssh use gets accept-new: recorded on first use,
-	// refused if it ever changes.
 	return fmt.Sprintf(
 		"\nHost %s\n  HostName %s\n  Port %d\n  User git\n  IdentityFile %s\n  IdentitiesOnly yes\n  StrictHostKeyChecking accept-new\n",
 		alias, hostAddr, sshPort, identityFile,

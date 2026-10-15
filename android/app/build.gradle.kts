@@ -127,4 +127,8 @@ dependencies {
 
     // DataStore (whitelist + config persistence)
     implementation("androidx.datastore:datastore-preferences:1.0.0")
+
+    // JVM unit tests (app/src/test): pure-Kotlin logic such as the Markdown
+    // parser and push summaries. Run with `gradle testDebugUnitTest`.
+    testImplementation("junit:junit:4.13.2")
 }

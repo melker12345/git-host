@@ -10,10 +10,14 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.core.app.ActivityCompat
 import com.localgithub.githost.service.GitHostService
-import com.localgithub.githost.EventBus
 import com.localgithub.githost.ui.AppNavHost
 import com.localgithub.githost.ui.theme.GitHostTheme
 
+/**
+ * The single activity. Asks for notification permission (Android 13+),
+ * starts the server, and hosts the Compose UI. It also receives
+ * githost://pair links and hands them to the pair screen via [EventBus].
+ */
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -40,6 +44,7 @@ class MainActivity : ComponentActivity() {
         handlePairLink(intent)
     }
 
+    /** Queues a githost:// VIEW intent for the pair screen; other intents are ignored. */
     private fun handlePairLink(intent: Intent?) {
         val data = intent?.data ?: return
         if (intent.action == Intent.ACTION_VIEW && data.scheme == "githost") {

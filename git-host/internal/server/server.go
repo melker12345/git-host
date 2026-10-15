@@ -1,3 +1,7 @@
+// Package server is the git-host SSH server run by git-host serve. It speaks
+// just enough SSH to let whitelisted keys run git-upload-pack and
+// git-receive-pack against bare repositories under one base directory, plus
+// the syncer.ListCommand used by restore.
 package server
 
 import (
@@ -16,17 +20,23 @@ import (
 	gossh "golang.org/x/crypto/ssh"
 )
 
+// contextKey keys values stored in an SSH session context.
 type contextKey string
 
+// labelKey carries the authorized key's whitelist label from authentication
+// to the session, for logging.
 const labelKey contextKey = "wl_label"
 
+// Config is what Run needs to serve.
 type Config struct {
-	Port    int
-	BaseDir string
-	Signer  gossh.Signer
-	WL      *whitelist.Whitelist
+	Port    int                  // TCP port to listen on
+	BaseDir string               // directory holding the bare repositories
+	Signer  gossh.Signer         // the server's SSH host key
+	WL      *whitelist.Whitelist // keys allowed to connect
 }
 
+// Run serves until ctx is cancelled. Every authorized key may fetch from and
+// push to any repository; a push to one that does not exist creates it.
 func Run(ctx context.Context, cfg Config) error {
 	srv := &ssh.Server{
 		Addr: fmt.Sprintf(":%d", cfg.Port),
@@ -131,6 +141,8 @@ func Run(ctx context.Context, cfg Config) error {
 	return nil
 }
 
+// resolvePath maps the repository path a client asked for onto baseDir,
+// refusing anything that would escape it.
 func resolvePath(baseDir, reqPath string) (string, error) {
 	clean := filepath.Clean(strings.TrimPrefix(reqPath, "/"))
 
@@ -152,6 +164,7 @@ func resolvePath(baseDir, reqPath string) (string, error) {
 	return resolved, nil
 }
 
+// ensureRepo creates a bare repository at path unless something exists there.
 func ensureRepo(path string) error {
 	if _, err := os.Stat(path); err == nil {
 		return nil

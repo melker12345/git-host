@@ -1,132 +1,127 @@
-# git-host
+<h1 align="center">git-host</h1>
 
-Your phone as a private git server. Push every repository on your laptop to
-it over SSH on the local network, browse them on the phone, and clone them
-back when a machine dies.
+<p align="center">
+  <strong>Your phone as a private git server.</strong><br>
+  Back up every repository to your phone over the local network. No cloud, no account.
+</p>
 
-Two parts, one protocol:
+<p align="center">
+  <a href="https://github.com/melker12345/git-host/actions/workflows/build.yml"><img src="https://github.com/melker12345/git-host/actions/workflows/build.yml/badge.svg" alt="build"></a>
+  <a href="https://github.com/melker12345/git-host/releases/latest"><img src="https://img.shields.io/github/v/release/melker12345/git-host?include_prereleases&label=release" alt="release"></a>
+  <img src="https://img.shields.io/badge/android-8.0%2B-3ddc84" alt="Android 8.0+">
+  <img src="https://img.shields.io/badge/go-1.21%2B-00add8" alt="Go 1.21+">
+</p>
 
-- **Android app** (`android/`): hosts bare repositories, serves them over SSH
-  (Apache MINA SSHD + JGit), advertises itself on the LAN via mDNS, and shows
-  each repository's README, commits and file tree.
-- **Go CLI** (`git-host/`): `pair`, `sync`, `restore` and a systemd timer for
-  the PC side. It can also host (`serve`) on a laptop or Raspberry Pi.
+---
 
-Access is a whitelist of SSH public keys. Every paired device has full read
-and write access to every repository; there are no per-repo permissions and
-no "friend" accounts.
+git-host keeps a copy of every repository on your computer on your phone,
+over SSH on your local network. You can browse the copies on the phone, and
+clone them all back when a machine dies. Nothing leaves your network.
+
+```
+ ┌──────────────┐    git push over SSH (LAN)   ┌──────────────────┐
+ │   computer   │ ───────────────────────────▶ │      phone       │
+ │  git-host    │                              │  bare repos      │
+ │  sync        │ ◀─────────────────────────── │  SSH server      │
+ └──────────────┘    git-host restore          │  repo browser    │
+                                               └──────────────────┘
+```
+
+It has two parts:
+
+- **Android app** (`android/`) stores bare repositories, serves them over
+  SSH, announces itself with mDNS, and shows each repository's README,
+  commits and files.
+- **Command-line tool** (`git-host/`) pairs your computer with the phone and
+  syncs or restores your repositories. It can also be the server itself, on
+  a laptop or a Raspberry Pi.
+
+## Install
+
+**Phone:** download `git-host.apk` from the
+[latest release](https://github.com/melker12345/git-host/releases/latest)
+and install it, or [build it yourself](docs.md#building).
+
+**Computer:** download the binary for your platform from the same release,
+or build it (needs Go 1.21 or newer):
+
+```sh
+cd git-host
+go build -o ~/.local/bin/git-host .
+```
 
 ## Quick start
 
-On the PC:
+**1. Pair.** Open the app on the phone, then run:
 
-```
-cd git-host && go build -o ~/.local/bin/git-host .
+```sh
 git-host pair
 ```
 
-`pair` prints a QR code holding this machine's SSH public key (an ECDSA key
-is generated in `~/.ssh/githost_ecdsa` if none exists). On the phone, open
-git-host, **Devices → + → Scan QR code**, check the fingerprint matches the
-one printed next to the code, and approve. The key never crosses the
-network. `pair` then finds the phone via mDNS, records its SSH host key, and
-writes an SSH config entry.
+A QR code with this computer's SSH key appears. On the phone go to
+**Devices → + → Scan QR code**, check that the fingerprint matches the one in
+the terminal, and tap **Approve**. The key never goes over the network.
 
-Back up everything:
+**2. Tell it where your repositories are.** The first `git-host sync` creates
+`~/.config/git-host/sync.conf`. List your project folders under `[dirs]`:
 
+```ini
+[dirs]
+code     = ~/code/*
+projects = ~/code/projects/*
 ```
-git-host sync
+
+A repository at `~/code/projects/foo` is stored on the phone as
+`projects-foo.git`.
+
+**3. Sync.**
+
+```console
+$ git-host sync
+Syncing 7 repositories to SM-S938B (192.168.1.153:2222), mirror mode
+
+  projects-browser                         ok
+  projects-git-host                        ok
+  ...
+7 pushed, 0 skipped, 0 failed in 1.2s
 ```
 
-The first run writes `~/.config/git-host/sync.conf`; edit `[dirs]` to list
-where your repositories live. A repo at `~/code/foo` is pushed as
-`code-foo.git`, so same-named repos from different trees never collide.
-`mode = mirror` makes the phone an exact copy; `additive` never deletes.
+**4. Make it automatic** (optional):
 
-Run it on a schedule:
-
-```
+```sh
 git-host timer install --every 30m
 ```
 
-Get everything back on a new machine:
+## Commands
 
-```
-git-host pair
-git-host restore --list
-git-host restore
-```
+| Command | What it does |
+|---|---|
+| `git-host sync` | Push every configured repository to the phone |
+| `git-host sync --dry-run` | Show what would be pushed, and where |
+| `git-host sync --only foo` | Push one repository |
+| `git-host restore --list` | List the repositories the phone holds |
+| `git-host restore` | Clone everything missing back onto this computer |
+| `git-host timer status` | When the last sync succeeded, and the last error |
+| `git-host serve` | Run the server on this machine instead of a phone |
 
-`restore` clones every repository the phone holds into the directory
-`[dirs]` maps it from, with the phone as remote `phone`.
+If the phone can't be reached (the app is closed, or you're on another
+network), `sync` says so and does nothing. If no sync has reached the phone
+for 3 days, it fails instead, so a backup that has quietly stopped gets
+noticed. Change the limit with `warn_after` in `sync.conf`.
 
-## Trust model
+## Good to know
 
-- **Keys, not passwords.** The phone authenticates devices by SSH public key
-  against `files/config/whitelist`. Ed25519 keys do not work on Android
-  (MINA's EdDSA provider is unavailable there); use ECDSA P-256 or RSA.
-- **Pairing is out of band.** The public key travels inside a QR code you
-  scan, and the phone shows its fingerprint before you approve.
-- **Hosts are pinned.** `pair` records the phone's SSH host key in
-  `devices.json`. `sync` and `restore` run ssh with strict checking against
-  git-host's own `known_hosts`, so a device that merely advertises the
-  service on the network cannot receive a push, and a changed key is
-  refused. `--trust-new` pins a key explicitly.
-- **LAN only.** The app binds to all interfaces but nothing forwards ports
-  or traverses NAT. Both sides are Wi-Fi peers.
+- **Use an ECDSA or RSA key.** Ed25519 keys don't work with the Android
+  server yet. `pair` creates a suitable key (`~/.ssh/githost_ecdsa`) if you
+  don't have one.
+- **Every paired device can read and write every repository.** Only pair
+  machines you own.
+- **Mirror mode copies deletions too.** By default the phone becomes an exact
+  copy, so deleting a branch locally deletes it on the phone at the next
+  sync. Set `mode = additive` in `sync.conf` to never delete anything.
+- **Uninstalling the app deletes the repositories** stored on the phone.
 
-## Phone app
+## Documentation
 
-- **Repos**: cards for each repository with the last push (who, branch,
-  files changed, size). Expand a card for README, the last 20 commits with
-  change counts, a collapsible file tree, clone URL and a delete button.
-- **Devices**: paired keys with fingerprint and optional expiry. Tap to
-  remove.
-- **Settings**: SSH port and an idle timeout that stops the server when
-  nothing has connected for a while. The server also stops when the app is
-  swiped away, so `sync` probes reachability and exits quietly when the
-  phone is asleep.
-
-Repositories are created on first push. Storage is the app's private
-directory; uninstalling the app deletes them.
-
-## Building
-
-The Go CLI needs only Go:
-
-```
-cd git-host && go test ./... && go build .
-```
-
-The Android app needs JDK 17, Gradle 8.6 and SDK platform 34. A user-space
-install of all three lives in `~/.local/opt` and `~/Android/Sdk`, set up by
-`~/.local/opt/setup-android-toolchain.sh` (no root). Then:
-
-```
-android/dev-build.sh
-```
-
-builds the **debug** variant and installs it over adb. Debug builds are a
-separate app, `git-host2` (package `com.localgithub.githost.dev`, port
-2322, mDNS name `<model>-dev`), so they never replace the app that holds
-your repositories.
-
-Release builds are signed with the keystore named in
-`android/keystore.properties` (gitignored). GitHub Actions
-(`.github/workflows/build.yml`) builds both APKs and the CLI on every push,
-and attaches them to a release on a `v*` tag.
-
-## Layout
-
-```
-git-host/            Go CLI and server
-  cmd/               pair, sync, restore, timer, serve, keys
-  internal/discovery mDNS browse, device cache, host-key pinning
-  internal/syncer    sync.conf, push, clone, restore mapping
-  internal/server    SSH server that execs system git
-  internal/whitelist authorized keys file
-android/             Kotlin app (Jetpack Compose, MINA SSHD, JGit)
-plan.md              original design notes, partly superseded by this file
-feature.md           ideas backlog
-TODO.md              what is left
-```
+[docs.md](docs.md) covers how it works in depth: configuration, the trust
+model, the protocol, the phone app, building from source, and the roadmap.
